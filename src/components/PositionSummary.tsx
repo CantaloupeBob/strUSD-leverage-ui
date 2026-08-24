@@ -1,4 +1,5 @@
 import { usePositionMetrics } from "../hooks/usePositionMetrics";
+import { useStrUSDApy } from "../hooks/useStrUSDApy";
 import { useTradeStore } from "../store/tradeStore";
 import { COLLATERAL_TOKEN, DEBT_TOKEN } from "../utils/constants";
 import { TokenIcon } from "./TokenIcon";
@@ -30,10 +31,24 @@ export function PositionSummary() {
   const collateral = useTradeStore((state) => state.collateral);
   const leverage = useTradeStore((state) => state.leverage);
   const { positionSize, borrowed, liquidationBuffer } = usePositionMetrics();
+  const {
+    data: apyData,
+    isLoading: isApyLoading,
+    isError: isApyError,
+  } = useStrUSDApy();
+  const apyValue = isApyLoading
+    ? "Loading..."
+    : isApyError || !apyData
+      ? "Unavailable"
+      : `${apyData.apy.toFixed(2)}%`;
 
   if (!collateral) {
     return (
       <div className="mt-4.5">
+        <div className="flex justify-between py-2 text-xs [&>span:first-child]:text-[#b8bfbd] [&>span:last-child]:text-right">
+          <span>Current APY</span>
+          <span className="text-[#c7f66e]">{apyValue}</span>
+        </div>
         <p className="max-w-67.5 text-xs leading-[1.7] text-[#b8bfbd]">
           Enter collateral to preview your position details.
         </p>
@@ -43,6 +58,10 @@ export function PositionSummary() {
 
   return (
     <div className="mt-4.5">
+      <div className="flex justify-between py-2 text-xs [&>span:first-child]:text-[#b8bfbd] [&>span:last-child]:text-right">
+        <span>Current APY</span>
+        <span className="text-[#c7f66e]">{apyValue}</span>
+      </div>
       <div className="flex justify-between py-2 text-xs [&>span:first-child]:text-[#b8bfbd] [&>span:last-child]:text-right">
         <span>Position size</span>
         <span className="text-[#c7f66e]">

@@ -44,8 +44,17 @@ export const LENDING_MARKETS = [
     venue: "Morpho",
     marketId:
       "0x975c6e8b71073a82216ae464bc44f67d71988450d2542d635d88bc78fca344b1",
+    loanToken: getAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"),
+    collateralToken: getAddress("0x280839980a7eD0D7717F64125fE241012E5F5815"),
+    oracle: getAddress("0x1506c98cE61aC63c8438B710C054a51c5dD9A6A4"),
+    irm: getAddress("0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC"),
+    lltv: 860000000000000000n,
   },
 ];
 
 export const COLLATERAL_TOKEN = TOKENS[1];
 export const DEBT_TOKEN = TOKENS[0];
+
+export const MORPHO_ADDRESS = getAddress(
+  "0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb",
+);

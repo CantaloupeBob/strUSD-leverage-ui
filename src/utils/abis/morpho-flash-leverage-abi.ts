@@ -1,0 +1,107 @@
+export const MORPHO_FLASH_LEVERAGE_ABI = [
+  {
+    type: "function",
+    name: "decreasePosition",
+    inputs: [
+      {
+        name: "dp",
+        type: "tuple",
+        internalType: "struct MorphoFlashLeverage.DecreasePosition",
+        components: [
+          { name: "user", type: "address", internalType: "address" },
+          { name: "colToWithdraw", type: "uint256", internalType: "uint256" },
+          { name: "colToSwap", type: "uint256", internalType: "uint256" },
+          { name: "repayAmount", type: "uint256", internalType: "uint256" },
+          { name: "swapData", type: "bytes", internalType: "bytes" },
+        ],
+      },
+      {
+        name: "mp",
+        type: "tuple",
+        internalType: "struct MarketParams",
+        components: [
+          { name: "loanToken", type: "address", internalType: "address" },
+          { name: "collateralToken", type: "address", internalType: "address" },
+          { name: "oracle", type: "address", internalType: "address" },
+          { name: "irm", type: "address", internalType: "address" },
+          { name: "lltv", type: "uint256", internalType: "uint256" },
+        ],
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "getDebt",
+    inputs: [
+      {
+        name: "mp",
+        type: "tuple",
+        internalType: "struct MarketParams",
+        components: [
+          { name: "loanToken", type: "address", internalType: "address" },
+          { name: "collateralToken", type: "address", internalType: "address" },
+          { name: "oracle", type: "address", internalType: "address" },
+          { name: "irm", type: "address", internalType: "address" },
+          { name: "lltv", type: "uint256", internalType: "uint256" },
+        ],
+      },
+      { name: "user", type: "address", internalType: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "increasePosition",
+    inputs: [
+      {
+        name: "ip",
+        type: "tuple",
+        internalType: "struct MorphoFlashLeverage.IncreasePosition",
+        components: [
+          { name: "user", type: "address", internalType: "address" },
+          { name: "initialCol", type: "uint256", internalType: "uint256" },
+          { name: "totalCol", type: "uint256", internalType: "uint256" },
+          { name: "borrowAmount", type: "uint256", internalType: "uint256" },
+          { name: "swapData", type: "bytes", internalType: "bytes" },
+        ],
+      },
+      {
+        name: "mp",
+        type: "tuple",
+        internalType: "struct MarketParams",
+        components: [
+          { name: "loanToken", type: "address", internalType: "address" },
+          { name: "collateralToken", type: "address", internalType: "address" },
+          { name: "oracle", type: "address", internalType: "address" },
+          { name: "irm", type: "address", internalType: "address" },
+          { name: "lltv", type: "uint256", internalType: "uint256" },
+        ],
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "onMorphoFlashLoan",
+    inputs: [
+      { name: "flashLoanAmount", type: "uint256", internalType: "uint256" },
+      { name: "data", type: "bytes", internalType: "bytes" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  { type: "error", name: "AmountMismatch", inputs: [] },
+  { type: "error", name: "IncorrectUser", inputs: [] },
+  { type: "error", name: "InsufficientAmountOut", inputs: [] },
+  { type: "error", name: "InsufficientFlashLoan", inputs: [] },
+  { type: "error", name: "InvalidCol", inputs: [] },
+  { type: "error", name: "InvalidLeverage", inputs: [] },
+  { type: "error", name: "OnlyMorpho", inputs: [] },
+  { type: "error", name: "TokenMismatch", inputs: [] },
+  { type: "error", name: "UnauthorizedCallback", inputs: [] },
+  { type: "error", name: "UnknownAction", inputs: [] },
+];
