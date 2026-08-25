@@ -5,6 +5,7 @@ import {
   DEBT_TOKEN,
   STRUSD_TRUSD_POOL,
   TRUSD_USDC_POOL,
+  YIELD_TOKEN,
 } from "../../utils/constants";
 import type {
   DecreasePosition,
@@ -72,9 +73,7 @@ const swapParams = (
 const increaseRoute = (): Route => [
   DEBT_TOKEN.address,
   TRUSD_USDC_POOL,
-  COLLATERAL_TOKEN.address === DEBT_TOKEN.address
-    ? zeroAddress
-    : COLLATERAL_TOKEN.address,
+  YIELD_TOKEN.address,
   STRUSD_TRUSD_POOL,
   COLLATERAL_TOKEN.address,
   zeroAddress,
@@ -88,9 +87,7 @@ const increaseRoute = (): Route => [
 const decreaseRoute = (): Route => [
   COLLATERAL_TOKEN.address,
   STRUSD_TRUSD_POOL,
-  DEBT_TOKEN.address === COLLATERAL_TOKEN.address
-    ? zeroAddress
-    : DEBT_TOKEN.address,
+  YIELD_TOKEN.address,
   TRUSD_USDC_POOL,
   DEBT_TOKEN.address,
   zeroAddress,
@@ -178,11 +175,11 @@ export function createIncreasePosition({
 }
 
 export function createDecreasePosition({
-    user,
-    colToWithdraw,
-    colToSwap,
-    repayAmount,
-    expectedOut,
+  user,
+  colToWithdraw,
+  colToSwap,
+  repayAmount,
+  expectedOut,
 }: DecreasePositionInput): DecreasePosition {
   return {
     user,

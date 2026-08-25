@@ -44,13 +44,7 @@ export function useLeverageStateMachine(
   const [state, setState] = useState<LeverageOperationState>("connect");
   const [retryAction, setRetryAction] = useState<RetryAction>();
   const market = LENDING_MARKETS[0];
-  const marketParams = {
-    loanToken: market.loanToken,
-    collateralToken: market.collateralToken,
-    oracle: market.oracle,
-    irm: market.irm,
-    lltv: market.lltv,
-  };
+  const marketParams = market;
   const quote = useIncreasePosition(initialCollateral, leverage);
   const { requiredAmount, totalCollateral, expectedBorrowOutput } = quote;
   const erc20 = useErc20(
@@ -60,6 +54,7 @@ export function useLeverageStateMachine(
     { chainId: mainnet.id },
   );
   const morpho = useMorpho({
+    marketId: market.marketId as `0x${string}`,
     userAddress: address,
     authorizedAddress: flashLeverageAddress,
     chainId: mainnet.id,
@@ -141,9 +136,19 @@ export function useLeverageStateMachine(
 
   useEffect(() => {
     if (state === "increasing" && increaseReceipt.isSuccess) {
-      setState("complete");
+      void Promise.all([
+        morpho.positionQuery.refetch(),
+        flashLeverage.debtQuery.refetch(),
+      ]).then(() => {
+        setState("complete");
+      });
     }
-  }, [increaseReceipt.isSuccess, state]);
+  }, [
+    flashLeverage.debtQuery,
+    increaseReceipt.isSuccess,
+    morpho.positionQuery,
+    state,
+  ]);
 
   useEffect(() => {
     const transactionFailed =
@@ -178,6 +183,8 @@ export function useLeverageStateMachine(
       quote.borrowQuery.data !== undefined &&
       expectedBorrowOutput
     ) {
+      setRetryAction("increase");
+      setState("increasing");
       flashLeverage.increasePosition(
         createIncreasePosition({
           user: address,
@@ -187,8 +194,6 @@ export function useLeverageStateMachine(
           expectedOut: expectedBorrowOutput,
         }),
       );
-      setRetryAction("increase");
-      setState("increasing");
     }
   };
 

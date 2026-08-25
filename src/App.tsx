@@ -1,7 +1,8 @@
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Header } from "./components/Header";
-import { LeverageCard } from "./components/LeverageCard";
+import { LeverageCard } from "./sections/leverage/LeverageCard";
+import { ExistingPosition } from "./sections/ExistingPosition";
 import { config } from "./web3-config";
 
 const queryClient = new QueryClient();
@@ -10,7 +11,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config}>
-        <div className="mx-auto h-svh min-h-svh w-full max-w-7xl overflow-hidden bg-black px-5 font-mono text-white sm:px-10">
+        <div className="mx-auto min-h-svh w-full max-w-7xl bg-black px-5 font-mono text-white sm:px-10">
           <div className="flex h-16 items-center justify-end">
             <Header />
           </div>
@@ -19,6 +20,7 @@ function App() {
               Put your collateral to work with controlled leverage.
             </p>
             <LeverageCard />
+            <ExistingPosition />
           </main>
         </div>
       </WagmiProvider>

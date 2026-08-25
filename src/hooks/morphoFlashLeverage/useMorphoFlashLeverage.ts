@@ -34,6 +34,7 @@ export function useMorphoFlashLeverage({
 }: UseMorphoFlashLeverageParameters) {
   const debtQuery = useReadContract({
     address: contractAddress,
+    chainId,
     abi: MORPHO_FLASH_LEVERAGE_ABI,
     functionName: "getDebt",
     args: userAddress ? [marketParams, userAddress] : undefined,

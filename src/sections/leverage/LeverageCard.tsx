@@ -1,15 +1,15 @@
 import { PositionSummary } from "./PositionSummary";
-import { useStrUSDApy } from "../hooks/useStrUSDApy";
-import { useTradeStore } from "../store/tradeStore";
+import { useStrUSDApy } from "../../hooks/useStrUSDApy";
+import { useTradeStore } from "../../store/tradeStore";
 import {
   COLLATERAL_TOKEN,
   DEBT_TOKEN,
   MAX_LEVERAGE,
   MAX_INITIAL_COLLATERAL_LENGTH,
-} from "../utils/constants";
-import { TokenIcon } from "./TokenIcon";
-import { LoadingStrip } from "./LoadingStrip";
-import { useLeverageStateMachine } from "../hooks/morphoFlashLeverage/useLeverageStateMachine";
+} from "../../utils/constants";
+import { TokenIcon } from "../../components/TokenIcon";
+import { LoadingStrip } from "../../components/LoadingStrip";
+import { useLeverageStateMachine } from "../../hooks/morphoFlashLeverage/useLeverageStateMachine";
 import { useConnect } from "wagmi";
 import { injected } from "wagmi/connectors";
 
@@ -47,7 +47,7 @@ export function LeverageCard() {
           </span>
         </div>
         <div className="text-xs leading-[1.6] text-[#b8bfbd]">
-          {COLLATERAL_TOKEN.symbol} collateral · {DEBT_TOKEN.symbol} debt ·
+          {COLLATERAL_TOKEN.symbol} collateral - {DEBT_TOKEN.symbol} debt -
           Ethereum
         </div>
         <div className="my-7 h-px w-full bg-[#252828] sm:my-12" />
