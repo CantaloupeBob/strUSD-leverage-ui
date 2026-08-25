@@ -1,22 +1,17 @@
-import { useEffect, useState } from "react";
-import {
-  useConnection,
-  useSwitchChain,
-  useWaitForTransactionReceipt,
-} from "wagmi";
+import { useState } from "react";
+import { useSwitchChain, useWaitForTransactionReceipt } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { formatUnits, isAddress } from "viem";
 import { useErc20 } from "../useErc20";
-import { useMorpho } from "../useMorpho";
 import { useTradeStore } from "../../store/tradeStore";
-import { useMorphoFlashLeverage } from "./useMorphoFlashLeverage";
 import {
   COLLATERAL_TOKEN,
-  LENDING_MARKETS,
   MORPHO_FLASH_LEVERAGE_ADDRESS,
 } from "../../utils/constants";
 import { useIncreasePosition } from "./useIncreasePosition";
 import { createIncreasePosition } from "./positionParams";
+import { useMorphoPosition } from "./useMorphoPosition";
+import { useTransactionLifecycle } from "../useTransactionLifecycle";
 
 export type LeverageOperationState =
   | "connect"
@@ -30,8 +25,6 @@ export type LeverageOperationState =
   | "increasing"
   | "error";
 
-// Which write action the user most recently initiated. Cleared once its
-// receipt confirms, so the UI can decide whose pending/error status to watch.
 type ActiveStep = "approval" | "authorization" | "increase" | undefined;
 
 const flashLeverageAddress = isAddress(MORPHO_FLASH_LEVERAGE_ADDRESS)
@@ -42,12 +35,10 @@ export function useLeverageStateMachine(
   initialCollateral: string,
   leverage: number,
 ) {
-  const { address, chainId } = useConnection();
+  const { address, chainId, morpho, flashLeverage } = useMorphoPosition();
   const resetTrade = useTradeStore((trade) => trade.reset);
   const switchChain = useSwitchChain();
   const [activeStep, setActiveStep] = useState<ActiveStep>();
-  const market = LENDING_MARKETS[0];
-  const marketParams = market;
   const quote = useIncreasePosition(initialCollateral, leverage);
   const { requiredAmount, totalCollateral, expectedBorrowOutput } = quote;
   const erc20 = useErc20(
@@ -56,19 +47,6 @@ export function useLeverageStateMachine(
     flashLeverageAddress,
     { chainId: mainnet.id },
   );
-  const morpho = useMorpho({
-    marketId: market.marketId as `0x${string}`,
-    marketParams: market,
-    userAddress: address,
-    authorizedAddress: flashLeverageAddress,
-    chainId: mainnet.id,
-  });
-  const flashLeverage = useMorphoFlashLeverage({
-    contractAddress: flashLeverageAddress,
-    marketParams,
-    userAddress: address,
-    chainId: mainnet.id,
-  });
   const approvalReceipt = useWaitForTransactionReceipt({
     hash: erc20.writeContract.data,
   });
@@ -95,93 +73,50 @@ export function useLeverageStateMachine(
     requiredAmount,
   });
 
-  // Each step's "pending" is derived straight from the wagmi mutation +
-  // receipt it owns. Because every retry calls `.reset()` immediately before
-  // re-submitting, a failed attempt can never leave stale pending/error state
-  // behind for the next attempt to trip over.
-  const approvalPending =
-    erc20.writeContract.isPending ||
-    (erc20.writeContract.isSuccess && approvalReceipt.isPending);
-  const authorizationPending =
-    morpho.authorizationWrite.isPending ||
-    (morpho.authorizationWrite.isSuccess && authorizationReceipt.isPending);
-  const increasePending =
-    flashLeverage.writeContract.isPending ||
-    (flashLeverage.writeContract.isSuccess && increaseReceipt.isPending);
-
-  const isTransactionPending =
-    approvalPending || authorizationPending || increasePending;
-
-  // If the active step isn't currently pending (never started, succeeded, or
-  // failed) we always fall back to the live readiness check. That means a
-  // failed transaction reverts the UI to the correct next action for free -
-  // there's no separate "failed"/"retry" state to get stuck in.
-  const state: LeverageOperationState = approvalPending
-    ? "approving"
-    : authorizationPending
-      ? "authorizing"
-      : increasePending
-        ? "increasing"
-        : readinessState;
-
-  useEffect(() => {
-    if (activeStep === "approval" && approvalReceipt.isSuccess) {
-      setActiveStep(undefined);
-      void erc20.allowanceQuery.refetch();
-    }
-  }, [activeStep, approvalReceipt.isSuccess, erc20.allowanceQuery]);
-
-  useEffect(() => {
-    if (
-      activeStep !== "approval" ||
-      (!erc20.writeContract.isError && !approvalReceipt.isError)
-    ) {
-      return;
-    }
-    erc20.writeContract.reset();
-    setActiveStep(undefined);
-  }, [activeStep, erc20.writeContract]);
-
-  useEffect(() => {
-    if (activeStep === "authorization" && authorizationReceipt.isSuccess) {
-      setActiveStep(undefined);
-      void morpho.authorizationQuery.refetch();
-    }
-  }, [activeStep, authorizationReceipt.isSuccess, morpho.authorizationQuery]);
-
-  useEffect(() => {
-    if (activeStep !== "authorization" || !morpho.authorizationWrite.isError) {
-      return;
-    }
-    morpho.authorizationWrite.reset();
-    setActiveStep(undefined);
-  }, [activeStep, morpho.authorizationWrite]);
-
-  useEffect(() => {
-    if (activeStep === "increase" && increaseReceipt.isSuccess) {
-      setActiveStep(undefined);
+  const approvalLifecycle = useTransactionLifecycle({
+    activeStep,
+    receipt: approvalReceipt,
+    setActiveStep,
+    step: "approval",
+    write: erc20.writeContract,
+    onConfirmed: () => void erc20.allowanceQuery.refetch(),
+  });
+  const authorizationLifecycle = useTransactionLifecycle({
+    activeStep,
+    receipt: authorizationReceipt,
+    setActiveStep,
+    step: "authorization",
+    write: morpho.authorizationWrite,
+    onConfirmed: () => void morpho.authorizationQuery.refetch(),
+  });
+  const increaseLifecycle = useTransactionLifecycle({
+    activeStep,
+    receipt: increaseReceipt,
+    setActiveStep,
+    step: "increase",
+    write: flashLeverage.writeContract,
+    onConfirmed: () => {
       void Promise.all([
         morpho.positionQuery.refetch(),
         flashLeverage.debtQuery.refetch(),
       ]).then(() => {
         resetTrade();
       });
-    }
-  }, [
-    activeStep,
-    flashLeverage.debtQuery,
-    increaseReceipt.isSuccess,
-    morpho.positionQuery,
-    resetTrade,
-  ]);
+    },
+  });
 
-  useEffect(() => {
-    if (activeStep !== "increase" || !flashLeverage.writeContract.isError) {
-      return;
-    }
-    flashLeverage.writeContract.reset();
-    setActiveStep(undefined);
-  }, [activeStep, flashLeverage.writeContract]);
+  const isTransactionPending =
+    approvalLifecycle.isPending ||
+    authorizationLifecycle.isPending ||
+    increaseLifecycle.isPending;
+
+  const state: LeverageOperationState = approvalLifecycle.isPending
+    ? "approving"
+    : authorizationLifecycle.isPending
+      ? "authorizing"
+      : increaseLifecycle.isPending
+        ? "increasing"
+        : readinessState;
 
   const insufficientBalance =
     erc20.balanceQuery.data !== undefined &&
@@ -190,16 +125,16 @@ export function useLeverageStateMachine(
 
   const startApproval = () => {
     if (!flashLeverageAddress || requiredAmount === undefined) return;
-    erc20.writeContract.reset();
-    setActiveStep("approval");
-    erc20.approve(flashLeverageAddress, requiredAmount);
+    approvalLifecycle.start(() => {
+      erc20.approve(flashLeverageAddress, requiredAmount);
+    });
   };
 
   const startAuthorization = () => {
     if (!flashLeverageAddress) return;
-    morpho.authorizationWrite.reset();
-    setActiveStep("authorization");
-    morpho.setAuthorization(flashLeverageAddress, true);
+    authorizationLifecycle.start(() => {
+      morpho.setAuthorization(flashLeverageAddress, true);
+    });
   };
 
   const startIncrease = () => {
@@ -212,17 +147,18 @@ export function useLeverageStateMachine(
     ) {
       return;
     }
-    flashLeverage.writeContract.reset();
-    setActiveStep("increase");
-    flashLeverage.increasePosition(
-      createIncreasePosition({
-        user: address,
-        initialCol: requiredAmount,
-        totalCol: totalCollateral,
-        borrowAmount: quote.estimatedBorrowAmount ?? quote.borrowQuery.data,
-        expectedOut: expectedBorrowOutput,
-      }),
-    );
+    const borrowAmount = quote.estimatedBorrowAmount ?? quote.borrowQuery.data;
+    increaseLifecycle.start(() => {
+      flashLeverage.increasePosition(
+        createIncreasePosition({
+          user: address,
+          initialCol: requiredAmount,
+          totalCol: totalCollateral,
+          borrowAmount,
+          expectedOut: expectedBorrowOutput,
+        }),
+      );
+    });
   };
 
   const runStep = (targetState: LeverageOperationState) => {

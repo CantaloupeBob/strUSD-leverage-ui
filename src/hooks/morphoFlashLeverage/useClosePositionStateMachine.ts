@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSwitchChain, useWaitForTransactionReceipt } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { useDecreasePosition } from "./useDecreasePosition";
 import { createDecreasePosition } from "./positionParams";
 import { DEBT_REPAYMENT_CUSHION } from "../../utils/constants";
+import { isBigIntArray } from "../../utils/amounts";
+import { useTransactionLifecycle } from "../useTransactionLifecycle";
 
 type CloseState =
   | "connect"
@@ -13,16 +15,14 @@ type CloseState =
   | "ready"
   | "closing";
 
-// Which write action the user most recently initiated. Cleared once its
-// receipt confirms.
 type ActiveStep = "authorization" | "close" | undefined;
 
 export function useClosePositionStateMachine() {
   const [activeStep, setActiveStep] = useState<ActiveStep>();
-  // The close flow refetches fresh collateral/debt before building calldata,
-  // which happens before the write mutation exists to report "pending" -
-  // this covers that gap so the button shows loading immediately on click.
   const [closePreparing, setClosePreparing] = useState(false);
+  const [closePreparationError, setClosePreparationError] = useState<
+    Error | undefined
+  >();
   const position = useDecreasePosition();
   const switchChain = useSwitchChain();
   const authorizationReceipt = useWaitForTransactionReceipt({
@@ -42,110 +42,78 @@ export function useClosePositionStateMachine() {
           ? "authorization-required"
           : "ready";
 
-  // Each step's "pending" is derived straight from the wagmi mutation +
-  // receipt it owns, so a failed attempt can't leave stale state behind for
-  // the next attempt - resetting the mutation right before resubmitting is
-  // enough to guarantee a clean transition back to loading.
-  const authorizationPending =
-    position.morpho.authorizationWrite.isPending ||
-    (position.morpho.authorizationWrite.isSuccess &&
-      authorizationReceipt.isPending);
-  const closePending =
-    closePreparing ||
-    position.flashLeverage.writeContract.isPending ||
-    (position.flashLeverage.writeContract.isSuccess && closeReceipt.isPending);
+  const authorizationLifecycle = useTransactionLifecycle({
+    activeStep,
+    receipt: authorizationReceipt,
+    setActiveStep,
+    step: "authorization",
+    write: position.morpho.authorizationWrite,
+    onConfirmed: () => {
+      void position.morpho.authorizationQuery.refetch();
+    },
+  });
+  const closeLifecycle = useTransactionLifecycle({
+    activeStep,
+    receipt: closeReceipt,
+    setActiveStep,
+    step: "close",
+    write: position.flashLeverage.writeContract,
+    onConfirmed: () => {
+      void Promise.all([
+        position.morpho.positionQuery.refetch(),
+        position.flashLeverage.debtQuery.refetch(),
+      ]);
+    },
+  });
+  const authorizationPending = authorizationLifecycle.isPending;
+  const closePending = closePreparing || closeLifecycle.isPending;
 
   const isTransactionPending = authorizationPending || closePending;
 
-  // If the active step isn't currently pending (never started, succeeded, or
-  // failed) we fall back to the live readiness check, so a failure reverts
-  // the UI straight back to the correct next action.
   const state: CloseState = authorizationPending
     ? "authorizing"
     : closePending
       ? "closing"
       : readinessState;
 
-  useEffect(() => {
-    if (activeStep === "authorization" && authorizationReceipt.isSuccess) {
-      setActiveStep(undefined);
-      void position.morpho.authorizationQuery.refetch();
-    }
-  }, [
-    activeStep,
-    authorizationReceipt.isSuccess,
-    position.morpho.authorizationQuery,
-  ]);
-
-  useEffect(() => {
-    if (
-      activeStep !== "authorization" ||
-      !position.morpho.authorizationWrite.isError
-    ) {
-      return;
-    }
-    position.morpho.authorizationWrite.reset();
-    setActiveStep(undefined);
-  }, [
-    activeStep,
-    position.morpho.authorizationWrite,
-  ]);
-
-  useEffect(() => {
-    if (activeStep === "close" && closeReceipt.isSuccess) {
-      setActiveStep(undefined);
-      void Promise.all([
-        position.morpho.positionQuery.refetch(),
-        position.flashLeverage.debtQuery.refetch(),
-      ]);
-    }
-  }, [
-    activeStep,
-    closeReceipt.isSuccess,
-    position.flashLeverage.debtQuery,
-    position.morpho.positionQuery,
-  ]);
-
-  useEffect(() => {
-    if (
-      activeStep !== "close" ||
-      !position.flashLeverage.writeContract.isError
-    ) {
-      return;
-    }
-    position.flashLeverage.writeContract.reset();
-    setActiveStep(undefined);
-  }, [
-    activeStep,
-    position.flashLeverage.writeContract,
-  ]);
-
   const startAuthorization = () => {
-    position.morpho.authorizationWrite.reset();
-    setActiveStep("authorization");
-    position.morpho.setAuthorization(position.flashLeverageAddress, true);
+    authorizationLifecycle.start(() => {
+      position.morpho.setAuthorization(position.flashLeverageAddress, true);
+    });
   };
 
-  const startClose = async () => {
-    if (!position.address) return;
+  const startClose = () => {
+    const user = position.address;
+    if (!user) return;
 
-    setActiveStep("close");
+    closeLifecycle.start(() => {
+      void prepareClose(user);
+    });
+  };
+
+  const prepareClose = async (user: NonNullable<typeof position.address>) => {
+    setClosePreparationError(undefined);
     setClosePreparing(true);
     try {
       const [{ data: positionData }, { data: debt }] = await Promise.all([
         position.morpho.positionQuery.refetch(),
         position.flashLeverage.debtQuery.refetch(),
       ]);
-      const collateral =
-        Array.isArray(positionData) && typeof positionData[2] === "bigint"
-          ? positionData[2]
-          : undefined;
+      const collateral = isBigIntArray<readonly [bigint, bigint, bigint]>(
+        positionData,
+        3,
+      )
+        ? positionData[2]
+        : undefined;
       const freshDebt = typeof debt === "bigint" ? debt : undefined;
       const freshRepayAmount =
         freshDebt === undefined
           ? undefined
           : freshDebt + DEBT_REPAYMENT_CUSHION;
-      const estimatedSwapAmount = position.swapQuery.estimatedSwapAmount;
+      const estimatedSwapAmount =
+        freshRepayAmount === undefined
+          ? undefined
+          : await position.swapQuery.getEstimatedSwapAmount(freshRepayAmount);
 
       if (
         collateral === undefined ||
@@ -160,16 +128,23 @@ export function useClosePositionStateMachine() {
         return;
       }
 
-      position.flashLeverage.writeContract.reset();
       position.flashLeverage.decreasePosition(
         createDecreasePosition({
-          user: position.address,
+          user,
           colToWithdraw: collateral,
           colToSwap: estimatedSwapAmount,
           repayAmount: freshRepayAmount,
           expectedOut: freshRepayAmount,
         }),
       );
+    } catch (error) {
+      setClosePreparationError(
+        error instanceof Error
+          ? error
+          : new Error("Unable to prepare close transaction"),
+      );
+      position.flashLeverage.writeContract.reset();
+      setActiveStep(undefined);
     } finally {
       setClosePreparing(false);
     }
@@ -177,7 +152,7 @@ export function useClosePositionStateMachine() {
 
   const runStep = (targetState: CloseState) => {
     if (targetState === "authorization-required") startAuthorization();
-    else if (targetState === "ready") void startClose();
+    else if (targetState === "ready") startClose();
   };
 
   const execute = () => {
@@ -208,6 +183,7 @@ export function useClosePositionStateMachine() {
       authorizationReceipt.error ??
       closeReceipt.error ??
       position.swapQuery.error ??
+      closePreparationError ??
       switchChain.error,
   };
 }

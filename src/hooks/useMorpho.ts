@@ -4,6 +4,7 @@ import type { Address, Hex } from "viem";
 import { MORPHO_ABI } from "../utils/abis/morpho-blue-abi";
 import { MORPHO_IRM_ABI } from "../utils/abis/morpho-irm-abi";
 import { MORPHO_ADDRESS } from "../utils/constants";
+import { isBigIntArray } from "../utils/amounts";
 
 const SECONDS_PER_YEAR = 365.25 * 24 * 60 * 60;
 
@@ -30,11 +31,7 @@ type UseMorphoParameters = {
 };
 
 function isPosition(data: unknown): data is readonly [bigint, bigint, bigint] {
-  return (
-    Array.isArray(data) &&
-    data.length === 3 &&
-    data.every((value) => typeof value === "bigint")
-  );
+  return isBigIntArray<readonly [bigint, bigint, bigint]>(data, 3);
 }
 
 export function useMorpho({
@@ -144,9 +141,7 @@ export function useMorpho({
 function isMarket(
   value: unknown,
 ): value is readonly [bigint, bigint, bigint, bigint, bigint, bigint] {
-  return (
-    Array.isArray(value) &&
-    value.length === 6 &&
-    value.every((item) => typeof item === "bigint")
-  );
+  return isBigIntArray<
+    readonly [bigint, bigint, bigint, bigint, bigint, bigint]
+  >(value, 6);
 }

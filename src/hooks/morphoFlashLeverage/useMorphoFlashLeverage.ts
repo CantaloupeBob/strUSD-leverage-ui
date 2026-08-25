@@ -44,8 +44,6 @@ export function useMorphoFlashLeverage({
   });
   const writeContract = useWriteContract();
 
-  const getDebt = () => debtQuery.refetch();
-
   const increasePosition = (position: IncreasePosition) =>
     writeContract.mutate({
       address: requireContractAddress(contractAddress),
@@ -65,7 +63,6 @@ export function useMorphoFlashLeverage({
     });
 
   return {
-    getDebt,
     increasePosition,
     decreasePosition,
     debt: debtQuery.data,

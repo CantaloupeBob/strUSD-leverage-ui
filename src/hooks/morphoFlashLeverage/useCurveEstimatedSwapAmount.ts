@@ -1,18 +1,21 @@
-import { useEffect, useMemo } from "react";
-import { useReadContract } from "wagmi";
-import { formatUnits } from "viem";
+import { usePublicClient, useReadContract } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { CURVE_ROUTER_ABI } from "../../utils/abis/curve-router-abi";
 import { CURVE_ROUTER_ADDRESS } from "../../utils/constants";
 import { getSwapArguments, type PositionDirection } from "./positionParams";
 
-const BASIS_POINTS = 10_000n;
+export const BASIS_POINTS = 10_000n;
+
+export function applySlippage(amount: bigint, slippageBps: bigint) {
+  return (amount * (BASIS_POINTS + slippageBps)) / BASIS_POINTS;
+}
 
 export function useCurveEstimatedSwapAmount(
   expectedOut?: bigint,
   direction: PositionDirection = "increase",
   slippageBps = 50n,
 ) {
+  const publicClient = usePublicClient({ chainId: mainnet.id });
   const query = useReadContract({
     address: CURVE_ROUTER_ADDRESS,
     chainId: mainnet.id,
@@ -27,47 +30,29 @@ export function useCurveEstimatedSwapAmount(
     },
   });
 
-  const estimatedSwapAmount = useMemo(() => {
-    if (query.data === undefined) return undefined;
-    return (query.data * (BASIS_POINTS + slippageBps)) / BASIS_POINTS;
-  }, [query.data, slippageBps]);
+  const estimatedSwapAmount =
+    query.data === undefined
+      ? undefined
+      : applySlippage(query.data, slippageBps);
 
-  useEffect(() => {
-    if (!import.meta.env.DEV || expectedOut === undefined) return;
+  const getEstimatedSwapAmount = async (freshExpectedOut: bigint) => {
+    if (!publicClient || freshExpectedOut <= 0n) return undefined;
 
-    console.debug("[Curve quote]", {
-      direction,
-      expectedOutRaw: expectedOut.toString(),
-      expectedOut:
-        direction === "decrease"
-          ? `${formatUnits(expectedOut, 6)} USDC`
-          : `${formatUnits(expectedOut, 18)} strUSD`,
-      quotedInputRaw: query.data?.toString(),
-      quotedInput:
-        query.data === undefined
-          ? undefined
-          : `${formatUnits(query.data, 18)} strUSD`,
-      bufferedInputRaw: estimatedSwapAmount?.toString(),
-      bufferedInput:
-        estimatedSwapAmount === undefined
-          ? undefined
-          : `${formatUnits(estimatedSwapAmount, 18)} strUSD`,
-      slippageBps: slippageBps.toString(),
-      error: query.error,
+    const quotedAmount = await publicClient.readContract({
+      address: CURVE_ROUTER_ADDRESS,
+      abi: CURVE_ROUTER_ABI,
+      functionName: "get_dx",
+      args: getSwapArguments(direction, freshExpectedOut),
     });
-  }, [
-    direction,
-    estimatedSwapAmount,
-    expectedOut,
-    slippageBps,
-    query.data,
-    query.error,
-  ]);
+
+    return applySlippage(quotedAmount, slippageBps);
+  };
 
   return {
     ...query,
     quotedSwapAmount: query.data,
     estimatedSwapAmount,
+    getEstimatedSwapAmount,
     slippageBps,
   };
 }

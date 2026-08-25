@@ -1,9 +1,8 @@
-import { useMemo } from "react";
 import { COLLATERAL_TOKEN } from "../../utils/constants";
 import { parseTokenAmount } from "../../utils/amounts";
 import { useCurveEstimatedSwapAmount } from "./useCurveEstimatedSwapAmount";
 import { useStrUSD } from "../useStrUSD";
-import { calculatePositionValues } from "./positionCalculations";
+import { usePositionMetrics } from "./usePositionMetrics";
 import { useTradeStore } from "../../store/tradeStore";
 
 function calculateTotalCollateral(
@@ -47,18 +46,14 @@ export function useIncreasePosition(collateral: string, leverage: number) {
     "increase",
     BigInt(slippageBps),
   );
-  const { exchangeRate, exchangeRateQuery } = useStrUSD(requiredAmount);
+  const { exchangeRate, exchangeRateQuery } = useStrUSD();
 
-  const values = useMemo(
-    () =>
-      calculatePositionValues(
-        collateral,
-        leverage,
-        exchangeRate,
-        borrowQuery.estimatedSwapAmount,
-      ),
-    [borrowQuery.estimatedSwapAmount, collateral, exchangeRate, leverage],
-  );
+  const values = usePositionMetrics({
+    collateral: requiredAmount,
+    debt: borrowQuery.estimatedSwapAmount,
+    exchangeRate,
+    leverage,
+  });
 
   return {
     requiredAmount,

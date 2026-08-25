@@ -1,6 +1,6 @@
-import { createConfig, http } from 'wagmi'
-import { injected } from 'wagmi/connectors'
-import { mainnet } from 'wagmi/chains'
+import { createConfig, http } from "wagmi";
+import { injected } from "wagmi/connectors";
+import { mainnet } from "wagmi/chains";
 
 export const config = createConfig({
   chains: [mainnet],
@@ -8,4 +8,4 @@ export const config = createConfig({
   transports: {
     [mainnet.id]: http(),
   },
-})
+});

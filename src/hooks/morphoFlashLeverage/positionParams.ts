@@ -14,7 +14,6 @@ import type {
 
 // Param construction can be found -
 // CurveRouter docs: https://docs.curve.finance/developer/amm/router/curve-router-ng
-
 type PositionIdentity = {
   user: Address;
 };
@@ -99,13 +98,7 @@ const decreaseRoute = (): Route => [
 ];
 
 const curvePools = (firstPool: Address, secondPool: Address) =>
-  [
-    firstPool,
-    secondPool,
-    zeroAddress,
-    zeroAddress,
-    zeroAddress,
-  ] as const;
+  [firstPool, secondPool, zeroAddress, zeroAddress, zeroAddress] as const;
 
 export function getIncreaseSwapArguments(
   expectedOut: bigint,

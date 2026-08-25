@@ -1,13 +1,7 @@
-import { useConnection } from "wagmi";
 import { formatUnits } from "viem";
-import { useMorpho } from "../hooks/useMorpho";
-import { useMorphoFlashLeverage } from "../hooks/morphoFlashLeverage/useMorphoFlashLeverage";
-import { useStrUSD } from "../hooks/useStrUSD";
 import {
   COLLATERAL_TOKEN,
   DEBT_TOKEN,
-  LENDING_MARKETS,
-  MORPHO_FLASH_LEVERAGE_ADDRESS,
   YIELD_TOKEN,
 } from "../utils/constants";
 import { LoadingStrip } from "../components/LoadingStrip";
@@ -16,6 +10,7 @@ import { TokenIcon } from "../components/TokenIcon";
 import { mainnet } from "wagmi/chains";
 import type { ReactNode } from "react";
 import { useClosePositionStateMachine } from "../hooks/morphoFlashLeverage/useClosePositionStateMachine";
+import { usePositionMetrics } from "../hooks/morphoFlashLeverage/usePositionMetrics";
 
 function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -36,57 +31,32 @@ function TokenValue({
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
       {value.toLocaleString("en-US", { maximumFractionDigits: 4 })}
-      <TokenIcon token={token} />
-      {" "}
-      {token.symbol}
+      <TokenIcon token={token} /> {token.symbol}
     </span>
   );
 }
 
 export function ExistingPosition() {
-  const { address, chainId } = useConnection();
-  const market = LENDING_MARKETS[0];
-  const morpho = useMorpho({
-    marketId: market.marketId as `0x${string}`,
-    marketParams: market,
-    userAddress: address,
-    chainId: mainnet.id,
-  });
-  const flashLeverage = useMorphoFlashLeverage({
-    contractAddress: MORPHO_FLASH_LEVERAGE_ADDRESS,
-    marketParams: market,
-    userAddress: address,
-    chainId: mainnet.id,
-  });
   const closePosition = useClosePositionStateMachine();
-  const position = morpho.position;
-  const { exchangeRate } = useStrUSD(position?.collateral);
-  const collateralAssets =
-    position && exchangeRate !== undefined
-      ? Number(formatUnits(position.collateral, COLLATERAL_TOKEN.decimals)) *
-        Number(formatUnits(exchangeRate, 18))
-      : undefined;
-  const debt =
-    typeof flashLeverage.debt !== "bigint"
-      ? undefined
-      : Number(formatUnits(flashLeverage.debt, DEBT_TOKEN.decimals));
-  const netEquity =
-    collateralAssets !== undefined && debt !== undefined
-      ? Math.max(collateralAssets - debt, 0)
-      : undefined;
-  const leverage =
-    collateralAssets !== undefined && netEquity !== undefined && netEquity > 0
-      ? collateralAssets / netEquity
-      : undefined;
-  const ltv =
-    collateralAssets !== undefined && debt !== undefined && collateralAssets > 0
-      ? (debt / collateralAssets) * 100
-      : undefined;
+  const {
+    address,
+    chainId,
+    market,
+    morpho,
+    collateral,
+    debt,
+    exchangeRate,
+  } = closePosition;
+  const stats = usePositionMetrics({
+    collateral,
+    debt,
+    exchangeRate,
+  });
   const isLoading =
     morpho.positionQuery.isLoading ||
-    flashLeverage.debtQuery.isLoading ||
+    closePosition.flashLeverage.debtQuery.isLoading ||
     morpho.interestRateQuery.isLoading;
-  const hasPosition = position !== undefined && position.collateral > 0n;
+  const hasPosition = collateral !== undefined && collateral > 0n;
 
   return (
     <section
@@ -117,7 +87,7 @@ export function ExistingPosition() {
             value={
               <TokenValue
                 token={COLLATERAL_TOKEN}
-                value={Number(formatUnits(position.collateral, 18))}
+                value={Number(formatUnits(collateral, 18))}
               />
             }
           />
@@ -127,27 +97,31 @@ export function ExistingPosition() {
               debt === undefined ? (
                 "--"
               ) : (
-                <TokenValue token={DEBT_TOKEN} value={debt} />
+                <TokenValue token={DEBT_TOKEN} value={stats.debt} />
               )
             }
           />
           <Stat
             label="Net equity"
             value={
-              netEquity === undefined ? (
+              debt === undefined || exchangeRate === undefined ? (
                 "--"
               ) : (
-                <TokenValue token={COLLATERAL_TOKEN} value={netEquity} />
+                <TokenValue token={COLLATERAL_TOKEN} value={stats.netEquity} />
               )
             }
           />
           <Stat
             label="Leverage"
-            value={leverage === undefined ? "--" : `${leverage.toFixed(2)}x`}
+            value={
+              debt === undefined || exchangeRate === undefined
+                ? "--"
+                : `${stats.leverage.toFixed(2)}x`
+            }
           />
           <Stat
             label="LTV / liquidation threshold"
-            value={`${ltv === undefined ? "--" : `${ltv.toFixed(2)}%`} / ${(
+            value={`${debt === undefined || exchangeRate === undefined ? "--" : `${stats.ltv.toFixed(2)}%`} / ${(
               Number(formatUnits(market.lltv, 18)) * 100
             ).toFixed(2)}%`}
           />
@@ -191,7 +165,7 @@ export function ExistingPosition() {
                   debt === undefined ? (
                     "--"
                   ) : (
-                    <TokenValue token={DEBT_TOKEN} value={debt} />
+                    <TokenValue token={DEBT_TOKEN} value={stats.debt} />
                   )
                 }
               />
