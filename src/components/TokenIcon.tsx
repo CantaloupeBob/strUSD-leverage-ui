@@ -1,16 +1,20 @@
-import type { Token } from '../utils/constants'
+import type { Token } from "../utils/constants";
 
 type TokenIconProps = {
-  token: Token
-  size?: 'small' | 'medium'
-}
+  token: Token;
+  size?: "small" | "medium";
+};
 
-export function TokenIcon({ token, size = 'small' }: TokenIconProps) {
+export function TokenIcon({ token, size = "small" }: TokenIconProps) {
   return (
     <img
-      alt={`${token.name} logo`}
-      className={size === 'medium' ? 'h-[30px] w-[30px] shrink-0 rounded-full object-cover' : 'h-[18px] w-[18px] shrink-0 rounded-full object-cover'}
+      alt=""
+      className={
+        size === "medium"
+          ? "h-7.5 w-7.5 shrink-0 rounded-full object-cover"
+          : "h-4.5 w-4.5 shrink-0 rounded-full object-cover"
+      }
       src={token.logo}
     />
-  )
+  );
 }

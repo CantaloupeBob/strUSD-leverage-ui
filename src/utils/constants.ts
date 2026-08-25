@@ -52,9 +52,17 @@ export const LENDING_MARKETS = [
   },
 ];
 
-export const COLLATERAL_TOKEN = TOKENS[1];
-export const DEBT_TOKEN = TOKENS[0];
+export const LEVERAGE_BUFFER = 0.15;
+const calculatedMaxLeverage =
+  (1 / (1 - Number(LENDING_MARKETS[0].lltv) / 1e18)) *
+  (1 - LEVERAGE_BUFFER);
+export const MAX_LEVERAGE = Math.ceil(calculatedMaxLeverage * 10) / 10;
+export const MAX_INITIAL_COLLATERAL_LENGTH = 11;
 
+export const COLLATERAL_TOKEN = TOKENS[1];
+export const YIELD_TOKEN = TOKENS[0];
+export const DEBT_TOKEN = TOKENS[2];
+export const MORPHO_FLASH_LEVERAGE_ADDRESS = "";
 export const MORPHO_ADDRESS = getAddress(
   "0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb",
 );
