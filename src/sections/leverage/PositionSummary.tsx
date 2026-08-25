@@ -16,9 +16,7 @@ import { useConnection } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { useMorpho } from "../../hooks/useMorpho";
 import { useMorphoFlashLeverage } from "../../hooks/morphoFlashLeverage/useMorphoFlashLeverage";
-import {
-  MORPHO_FLASH_LEVERAGE_ADDRESS,
-} from "../../utils/constants";
+import { MORPHO_FLASH_LEVERAGE_ADDRESS } from "../../utils/constants";
 
 const formatAmount = (value: number) =>
   value.toLocaleString("en-US", { maximumFractionDigits: 4 });
@@ -26,15 +24,34 @@ const formatAmount = (value: number) =>
 function TokenValue({
   token,
   value,
+  shouldShowIcon = true,
 }: {
   token: typeof DEBT_TOKEN;
   value: number;
+  shouldShowIcon?: boolean;
 }) {
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap align-middle">
       {formatAmount(value)}
-      <TokenIcon token={token} />
-      {token.symbol}
+      {shouldShowIcon && <TokenIcon token={token} />} {token.symbol}
+    </span>
+  );
+}
+
+function TransitionTokenValue({
+  token,
+  current,
+  next,
+}: {
+  token: typeof DEBT_TOKEN;
+  current: number;
+  next: number;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <span>{formatAmount(current)}</span>
+      <span className="text-[#b8bfbd]">-&gt;</span>
+      <TokenValue token={token} value={next} />
     </span>
   );
 }
@@ -66,6 +83,7 @@ export function PositionSummary() {
   const market = LENDING_MARKETS[0];
   const existingMorpho = useMorpho({
     marketId: market.marketId as `0x${string}`,
+    marketParams: market,
     userAddress: address,
     chainId: mainnet.id,
   });
@@ -99,13 +117,25 @@ export function PositionSummary() {
       quote.grossExposure
     : quote.grossExposure;
   const totalCollateralValue =
-    existingCollateralValue + (quote.collateralAssets * leverage);
+    existingCollateralValue + quote.collateralAssets * leverage;
   const totalDebt = existingDebt + (quote.debt ?? 0);
   const totalNetEquity = Math.max(totalCollateralValue - totalDebt, 0);
   const totalLtv =
     totalCollateralValue > 0
       ? (totalDebt / totalCollateralValue) * 100
       : undefined;
+  const currentNetEquity = Math.max(existingCollateralValue - existingDebt, 0);
+  const currentLeverage =
+    existingCollateralValue > 0 && currentNetEquity > 0
+      ? existingCollateralValue / currentNetEquity
+      : 0;
+  const currentLtv =
+    existingCollateralValue > 0
+      ? (existingDebt / existingCollateralValue) * 100
+      : 0;
+  const currentCollateral = existingCollateral
+    ? Number(formatUnits(existingCollateral, COLLATERAL_TOKEN.decimals))
+    : 0;
 
   if (!collateral) {
     return (
@@ -120,13 +150,32 @@ export function PositionSummary() {
   return (
     <div className="mt-4.5">
       <StatRow label="strUSD collateral">
-        <TokenValue token={COLLATERAL_TOKEN} value={totalCollateral} />
-      </StatRow>
-      <StatRow label="strUSD exposure">
-        <TokenValue token={COLLATERAL_TOKEN} value={totalCollateral} />
+        <TransitionTokenValue
+          token={COLLATERAL_TOKEN}
+          current={currentCollateral}
+          next={totalCollateral}
+        />
       </StatRow>
       <StatRow label="net equity">
-        <TokenValue token={COLLATERAL_TOKEN} value={totalNetEquity} />
+        <TransitionTokenValue
+          token={COLLATERAL_TOKEN}
+          current={currentNetEquity}
+          next={totalNetEquity}
+        />
+      </StatRow>
+      <StatRow label="strUSD exposure">
+        <TransitionTokenValue
+          token={COLLATERAL_TOKEN}
+          current={currentCollateral}
+          next={totalCollateral}
+        />
+      </StatRow>
+      <StatRow label="leverage">
+        {currentLeverage.toFixed(1)}x -&gt;{" "}
+        {totalNetEquity > 0
+          ? (totalCollateralValue / totalNetEquity).toFixed(1)
+          : "--"}
+        x
       </StatRow>
       <StatRow label="APY">
         {isApyLoading ? (
@@ -137,27 +186,39 @@ export function PositionSummary() {
           `Base ${apyData.apy.toFixed(2)}% -> Leveraged ${(apyData.apy * leverage).toFixed(2)}%`
         )}
       </StatRow>
-      <StatRow label="exchange rate">
-        {exchangeRateQuery.isLoading ? (
-          <LoadingStrip className="ml-auto h-2.5 w-28" />
-        ) : (
-          navValue
-        )}
-      </StatRow>
       <StatRow label="LTV / liquidation threshold">
         {totalLtv === undefined
           ? "--"
-          : `${totalLtv.toFixed(2)}%`}{" "}
+          : `${currentLtv.toFixed(2)}% -> ${totalLtv.toFixed(2)}%`}{" "}
         / {liquidationThreshold.toFixed(2)}%
       </StatRow>
-      <StatRow label="leverage">{leverage.toFixed(1)}x</StatRow>
       <StatRow label="USDC debt">
         {quote.borrowQuery.isLoading ? (
           <LoadingStrip className="ml-auto h-2.5 w-20" />
         ) : (
           (quote.debt !== undefined || existingDebt > 0) && (
-            <TokenValue token={DEBT_TOKEN} value={totalDebt} />
+            <TransitionTokenValue
+              token={DEBT_TOKEN}
+              current={existingDebt}
+              next={totalDebt}
+            />
           )
+        )}
+      </StatRow>
+      <StatRow label="Morpho interest rate">
+        {existingMorpho.interestRateQuery.isLoading ? (
+          <LoadingStrip className="ml-auto h-2.5 w-28" />
+        ) : existingMorpho.annualInterestRate === undefined ? (
+          "--"
+        ) : (
+          `${existingMorpho.annualInterestRate.toFixed(2)}%`
+        )}
+      </StatRow>
+      <StatRow label="exchange rate">
+        {exchangeRateQuery.isLoading ? (
+          <LoadingStrip className="ml-auto h-2.5 w-28" />
+        ) : (
+          navValue
         )}
       </StatRow>
     </div>

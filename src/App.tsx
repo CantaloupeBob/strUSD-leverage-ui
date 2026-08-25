@@ -17,7 +17,7 @@ function App() {
           </div>
           <main className="mx-auto w-full max-w-230 py-7.5 sm:py-13">
             <p className="mb-9 text-[13px] text-[#b8bfbd]">
-              Put your collateral to work with controlled leverage.
+              Gain exposure to strUSD to gain boosted yeild.
             </p>
             <LeverageCard />
             <ExistingPosition />

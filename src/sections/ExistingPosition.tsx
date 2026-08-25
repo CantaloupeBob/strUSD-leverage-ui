@@ -34,6 +34,7 @@ function TokenValue({
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
       {value.toLocaleString("en-US", { maximumFractionDigits: 4 })}
       <TokenIcon token={token} />
+      {" "}
       {token.symbol}
     </span>
   );
@@ -44,6 +45,7 @@ export function ExistingPosition() {
   const market = LENDING_MARKETS[0];
   const morpho = useMorpho({
     marketId: market.marketId as `0x${string}`,
+    marketParams: market,
     userAddress: address,
     chainId: mainnet.id,
   });
@@ -77,7 +79,9 @@ export function ExistingPosition() {
       ? (debt / collateralAssets) * 100
       : undefined;
   const isLoading =
-    morpho.positionQuery.isLoading || flashLeverage.debtQuery.isLoading;
+    morpho.positionQuery.isLoading ||
+    flashLeverage.debtQuery.isLoading ||
+    morpho.interestRateQuery.isLoading;
   const hasPosition = position !== undefined && position.collateral > 0n;
 
   return (
@@ -142,6 +146,14 @@ export function ExistingPosition() {
             value={`${ltv === undefined ? "--" : `${ltv.toFixed(2)}%`} / ${(
               Number(formatUnits(market.lltv, 18)) * 100
             ).toFixed(2)}%`}
+          />
+          <Stat
+            label="Morpho interest rate"
+            value={
+              morpho.annualInterestRate === undefined
+                ? "--"
+                : `${morpho.annualInterestRate.toFixed(2)}%`
+            }
           />
         </div>
       )}

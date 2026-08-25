@@ -55,6 +55,7 @@ export function useLeverageStateMachine(
   );
   const morpho = useMorpho({
     marketId: market.marketId as `0x${string}`,
+    marketParams: market,
     userAddress: address,
     authorizedAddress: flashLeverageAddress,
     chainId: mainnet.id,
