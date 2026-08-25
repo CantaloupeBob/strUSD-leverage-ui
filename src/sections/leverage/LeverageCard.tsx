@@ -34,9 +34,9 @@ export function LeverageCard() {
       className="grid min-h-105 grid-cols-1 border border-[#414545] bg-[#050606] sm:grid-cols-2"
       aria-label="Create leveraged position"
     >
-      <div className="flex flex-col p-6.5 sm:p-9">
+      <div className="flex flex-col p-5 sm:p-9">
         <div className="mb-2.5 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 font-sans text-[30px] font-medium tracking-[-.04em]">
+          <div className="flex items-center gap-2.5 font-sans text-[26px] font-medium tracking-[-.04em] sm:text-[30px]">
             <TokenIcon size="medium" token={COLLATERAL_TOKEN} />
             {COLLATERAL_TOKEN.symbol}
           </div>
@@ -50,7 +50,7 @@ export function LeverageCard() {
           {COLLATERAL_TOKEN.symbol} collateral - {DEBT_TOKEN.symbol} debt -
           Ethereum
         </div>
-        <div className="my-7 h-px w-full bg-[#252828] sm:my-12" />
+        <div className="my-6 h-px w-full bg-[#252828] sm:my-12" />
         <label
           className="mb-2.5 flex justify-between text-[11px] uppercase tracking-[.08em] text-[#b8bfbd]"
           htmlFor="collateral"
@@ -111,7 +111,7 @@ export function LeverageCard() {
             Insufficient {COLLATERAL_TOKEN.symbol} balance
           </p>
         )}
-        <div className="mt-11">
+        <div className="mt-9 sm:mt-11">
           <div className="mb-2.5 flex justify-between text-[11px] uppercase tracking-[.08em] text-[#b8bfbd]">
             <span>Leverage</span>
             <span className="range-value">{displayedLeverage.toFixed(1)}x</span>
@@ -132,14 +132,14 @@ export function LeverageCard() {
           </div>
         </div>
       </div>
-      <div className="border-t border-[#414545] bg-[#0b0d0d] p-6.5 sm:border-l sm:border-t-0 sm:p-9">
+      <div className="border-t border-[#414545] bg-[#0b0d0d] p-5 sm:border-l sm:border-t-0 sm:p-9">
         <div className="text-[11px] uppercase tracking-[.12em] text-[#b8bfbd]">
           Position summary
         </div>
         <PositionSummary />
         {hasCollateral && (
           <button
-            className="mt-10 w-full border border-[#c7f66e] px-4 py-3 text-xs uppercase tracking-[.08em] text-[#c7f66e] transition-colors hover:bg-[#c7f66e] hover:text-black disabled:cursor-not-allowed disabled:border-[#414545] disabled:text-[#b8bfbd] disabled:hover:bg-transparent disabled:hover:text-[#b8bfbd]"
+            className="mt-8 w-full border border-[#c7f66e] px-4 py-3 text-xs uppercase tracking-[.08em] text-[#c7f66e] transition-colors hover:bg-[#c7f66e] hover:text-black disabled:cursor-not-allowed disabled:border-[#414545] disabled:text-[#b8bfbd] disabled:hover:bg-transparent disabled:hover:text-[#b8bfbd] sm:mt-10"
             disabled={
               leverageOperation.actionDisabled &&
               leverageOperation.state !== "connect"

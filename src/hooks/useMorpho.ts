@@ -133,8 +133,7 @@ export function useMorpho({
       interestRateQuery.data === undefined
         ? undefined
         : (Math.exp(
-            Number(formatUnits(interestRateQuery.data, 18)) *
-              SECONDS_PER_YEAR,
+            Number(formatUnits(interestRateQuery.data, 18)) * SECONDS_PER_YEAR,
           ) -
             1) *
           100,

@@ -66,9 +66,11 @@ function StatRow({
   valueClassName?: string;
 }) {
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-2 text-xs">
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,auto)] items-center gap-2 py-2 text-xs sm:gap-4">
       <span className="min-w-0 leading-5 text-[#b8bfbd]">{label}</span>
-      <span className={`whitespace-nowrap text-right ${valueClassName}`}>
+      <span
+        className={`max-w-full overflow-x-auto whitespace-nowrap text-right ${valueClassName}`}
+      >
         {children}
       </span>
     </div>
