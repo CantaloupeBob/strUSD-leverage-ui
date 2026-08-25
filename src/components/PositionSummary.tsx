@@ -1,4 +1,5 @@
 import { useStrUSD } from "../hooks/useStrUSD";
+import { useCurveEstimatedBorrowAmount } from "../hooks/useCurveEstimatedBorrowAmount";
 import { useTradeStore } from "../store/tradeStore";
 import {
   COLLATERAL_TOKEN,
@@ -7,6 +8,7 @@ import {
   YIELD_TOKEN,
 } from "../utils/constants";
 import { TokenIcon } from "./TokenIcon";
+import { LoadingStrip } from "./LoadingStrip";
 import { parseUnits } from "viem";
 import type { ReactNode } from "react";
 
@@ -57,13 +59,20 @@ export function PositionSummary() {
   const { exchangeRate, exchangeRateQuery } = useStrUSD(shares);
   const collateralShares = Number(collateral) || 0;
   const grossExposure = collateralShares * leverage;
-  const debt = Math.max(grossExposure - collateralShares, 0);
-  const netEquity = collateralShares;
+  const expectedBorrowOutput = shares
+    ? (shares * BigInt(Math.round((leverage - 1) * 10))) / 10n
+    : undefined;
+  const borrowQuery = useCurveEstimatedBorrowAmount(expectedBorrowOutput);
+  const debt =
+    borrowQuery.estimatedBorrowAmount === undefined
+      ? Math.max(grossExposure - collateralShares, 0)
+      : Number(borrowQuery.estimatedBorrowAmount) / 10 ** DEBT_TOKEN.decimals;
+  const netEquity = Math.max(grossExposure - debt, 0);
   const currentLtv = grossExposure > 0 ? (debt / grossExposure) * 100 : 0;
   const liquidationThreshold = (Number(LENDING_MARKETS[0].lltv) / 1e18) * 100;
   const navValue =
     exchangeRate === undefined
-      ? "Loading..."
+      ? null
       : `${formatAmount(Number(exchangeRate) / 10 ** YIELD_TOKEN.decimals)} ${YIELD_TOKEN.symbol} / ${COLLATERAL_TOKEN.symbol}`;
 
   if (!collateral) {
@@ -82,7 +91,11 @@ export function PositionSummary() {
         <TokenValue token={COLLATERAL_TOKEN} value={Number(collateral)} />
       </StatRow>
       <StatRow label="USDC debt" valueClassName="text-[#c7f66e]">
-        <TokenValue token={DEBT_TOKEN} value={debt} />
+        {borrowQuery.isLoading ? (
+          <LoadingStrip className="ml-auto h-2.5 w-20" />
+        ) : (
+          <TokenValue token={DEBT_TOKEN} value={debt} />
+        )}
       </StatRow>
       <StatRow label="Gross strUSD exposure">
         <TokenValue token={COLLATERAL_TOKEN} value={grossExposure} />
@@ -92,7 +105,11 @@ export function PositionSummary() {
       </StatRow>
       <StatRow label="Leverage">{leverage.toFixed(1)}x</StatRow>
       <StatRow label="strUSD NAV / exchange rate">
-        {exchangeRateQuery.isLoading ? "Loading..." : navValue}
+        {exchangeRateQuery.isLoading ? (
+          <LoadingStrip className="ml-auto h-2.5 w-28" />
+        ) : (
+          navValue
+        )}
       </StatRow>
       <StatRow label="LTV / liquidation threshold">
         {currentLtv.toFixed(2)}% / {liquidationThreshold.toFixed(2)}%

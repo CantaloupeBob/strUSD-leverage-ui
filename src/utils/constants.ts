@@ -63,6 +63,15 @@ export const COLLATERAL_TOKEN = TOKENS[1];
 export const YIELD_TOKEN = TOKENS[0];
 export const DEBT_TOKEN = TOKENS[2];
 export const MORPHO_FLASH_LEVERAGE_ADDRESS = "";
+export const STRUSD_TRUSD_POOL = getAddress(
+  "0x25a637C80AD90177d0B3fF28aa2D3F74F7165ccb",
+);
+export const TRUSD_USDC_POOL = getAddress(
+  "0xb723a224c9ACF3891B20437B4d55dd45600F5FA3",
+);
+export const CURVE_ROUTER_ADDRESS = getAddress(
+  "0x45312ea0eFf7E09C83CBE249fa1d7598c4C8cd4e",
+);
 export const MORPHO_ADDRESS = getAddress(
   "0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb",
 );
