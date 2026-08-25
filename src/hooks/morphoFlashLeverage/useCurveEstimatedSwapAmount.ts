@@ -29,13 +29,13 @@ export function useCurveEstimatedSwapAmount(
     },
   });
 
-  const estimatedBorrowAmount = useMemo(() => {
+  const estimatedSwapAmount = useMemo(() => {
     if (query.data === undefined) return undefined;
     return (query.data * (BASIS_POINTS + bufferBps)) / BASIS_POINTS;
   }, [bufferBps, query.data]);
 
   return {
     ...query,
-    estimatedBorrowAmount,
+    estimatedSwapAmount,
   };
 }

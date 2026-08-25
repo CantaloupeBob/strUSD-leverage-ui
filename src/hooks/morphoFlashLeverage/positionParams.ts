@@ -98,10 +98,10 @@ const decreaseRoute = (): Route => [
   zeroAddress,
 ];
 
-const curvePools = () =>
+const curvePools = (firstPool: Address, secondPool: Address) =>
   [
-    TRUSD_USDC_POOL,
-    STRUSD_TRUSD_POOL,
+    firstPool,
+    secondPool,
     zeroAddress,
     zeroAddress,
     zeroAddress,
@@ -114,7 +114,7 @@ export function getIncreaseSwapArguments(
     increaseRoute(),
     swapParams(1n, 0n, 1n, 0n),
     expectedOut,
-    curvePools(),
+    curvePools(TRUSD_USDC_POOL, STRUSD_TRUSD_POOL),
   ];
 }
 
@@ -125,7 +125,7 @@ export function getDecreaseSwapArguments(
     decreaseRoute(),
     swapParams(0n, 1n, 0n, 1n),
     expectedOut,
-    curvePools(),
+    curvePools(STRUSD_TRUSD_POOL, TRUSD_USDC_POOL),
   ];
 }
 

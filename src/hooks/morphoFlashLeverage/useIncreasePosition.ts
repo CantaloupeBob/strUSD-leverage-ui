@@ -52,9 +52,9 @@ export function useIncreasePosition(collateral: string, leverage: number) {
         collateral,
         leverage,
         exchangeRate,
-        borrowQuery.estimatedBorrowAmount,
+        borrowQuery.estimatedSwapAmount,
       ),
-    [borrowQuery.estimatedBorrowAmount, collateral, exchangeRate, leverage],
+    [borrowQuery.estimatedSwapAmount, collateral, exchangeRate, leverage],
   );
 
   return {
@@ -62,7 +62,7 @@ export function useIncreasePosition(collateral: string, leverage: number) {
     totalCollateral,
     expectedBorrowOutput,
     borrowQuery,
-    estimatedBorrowAmount: borrowQuery.estimatedBorrowAmount,
+    estimatedBorrowAmount: borrowQuery.estimatedSwapAmount,
     exchangeRate,
     exchangeRateQuery,
     ...values,

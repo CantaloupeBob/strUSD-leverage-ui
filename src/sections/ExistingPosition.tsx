@@ -13,6 +13,7 @@ import { LoadingStrip } from "../components/LoadingStrip";
 import { TokenIcon } from "../components/TokenIcon";
 import { mainnet } from "wagmi/chains";
 import type { ReactNode } from "react";
+import { useClosePositionStateMachine } from "../hooks/morphoFlashLeverage/useClosePositionStateMachine";
 
 function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -55,6 +56,7 @@ export function ExistingPosition() {
     userAddress: address,
     chainId: mainnet.id,
   });
+  const closePosition = useClosePositionStateMachine();
   const position = morpho.position;
   const { exchangeRate } = useStrUSD(position?.collateral);
   const collateralAssets =
@@ -155,6 +157,37 @@ export function ExistingPosition() {
                 : `${morpho.annualInterestRate.toFixed(2)}%`
             }
           />
+          <div className="mt-5 border-t border-[#252828] pt-4">
+            <div className="mb-3 text-[11px] uppercase tracking-[.08em] text-[#b8bfbd]">
+              Close position
+            </div>
+            <Stat
+              label="Estimated USDC returned"
+              value={
+                closePosition.estimatedReturn === undefined ? (
+                  "--"
+                ) : (
+                  <TokenValue
+                    token={DEBT_TOKEN}
+                    value={closePosition.estimatedReturn}
+                  />
+                )
+              }
+            />
+            <Stat label="After close" value="0 collateral / 0 debt" />
+            <button
+              className="mt-4 w-full border border-[#f08b8b] px-4 py-3 text-xs uppercase tracking-[.08em] text-[#f08b8b] transition-colors hover:bg-[#f08b8b] hover:text-black disabled:cursor-not-allowed disabled:border-[#414545] disabled:text-[#b8bfbd] disabled:hover:bg-transparent disabled:hover:text-[#b8bfbd]"
+              disabled={closePosition.actionDisabled}
+              onClick={closePosition.execute}
+              type="button"
+            >
+              {closePosition.isTransactionPending ? (
+                <LoadingStrip className="mx-auto h-3 w-28" />
+              ) : (
+                closePosition.actionLabel
+              )}
+            </button>
+          </div>
         </div>
       )}
     </section>
