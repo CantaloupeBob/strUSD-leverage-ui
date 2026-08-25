@@ -5,7 +5,7 @@ import { CURVE_ROUTER_ADDRESS } from "../../utils/constants";
 import {
   getSwapArguments,
   type PositionDirection,
-} from "./useMorphoFlashLeverageParams";
+} from "./positionParams";
 
 const BASIS_POINTS = 10_000n;
 

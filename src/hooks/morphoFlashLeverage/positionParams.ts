@@ -161,37 +161,34 @@ function encodeSwapData([route, params, expectedOut]: CurveSwapArguments) {
   );
 }
 
-export function useMorphoFlashLeverageParams() {
-  const createIncreasePosition = ({
-    user,
-    initialCol,
-    totalCol,
-    borrowAmount,
-    expectedOut,
-  }: IncreasePositionInput): IncreasePosition => ({
+export function createIncreasePosition({
+  user,
+  initialCol,
+  totalCol,
+  borrowAmount,
+  expectedOut,
+}: IncreasePositionInput): IncreasePosition {
+  return {
     user,
     initialCol,
     totalCol,
     borrowAmount,
     swapData: encodeSwapData(getIncreaseSwapArguments(expectedOut)),
-  });
+  };
+}
 
-  const createDecreasePosition = ({
+export function createDecreasePosition({
     user,
     colToWithdraw,
     colToSwap,
     repayAmount,
     expectedOut,
-  }: DecreasePositionInput): DecreasePosition => ({
+}: DecreasePositionInput): DecreasePosition {
+  return {
     user,
     colToWithdraw,
     colToSwap,
     repayAmount,
     swapData: encodeSwapData(getDecreaseSwapArguments(expectedOut)),
-  });
-
-  return {
-    createIncreasePosition,
-    createDecreasePosition,
   };
 }

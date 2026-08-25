@@ -15,7 +15,7 @@ import {
   MORPHO_FLASH_LEVERAGE_ADDRESS,
 } from "../../utils/constants";
 import { useIncreasePosition } from "./useIncreasePosition";
-import { useMorphoFlashLeverageParams } from "./useMorphoFlashLeverageParams";
+import { createIncreasePosition } from "./positionParams";
 
 export type LeverageOperationState =
   | "connect"
@@ -70,7 +70,6 @@ export function useLeverageStateMachine(
     userAddress: address,
     chainId: mainnet.id,
   });
-  const params = useMorphoFlashLeverageParams();
   const approvalReceipt = useWaitForTransactionReceipt({
     hash: erc20.writeContract.data,
   });
@@ -116,7 +115,6 @@ export function useLeverageStateMachine(
     address,
     chainId,
     erc20.allowanceQuery.data,
-    flashLeverageAddress,
     initialCollateral,
     expectedBorrowOutput,
     quote.borrowQuery.data,
@@ -181,7 +179,7 @@ export function useLeverageStateMachine(
       expectedBorrowOutput
     ) {
       flashLeverage.increasePosition(
-        params.createIncreasePosition({
+        createIncreasePosition({
           user: address,
           initialCol: requiredAmount,
           totalCol: totalCollateral,
