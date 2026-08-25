@@ -29,7 +29,10 @@ export type LeverageOperationState =
   | "ready"
   | "increasing"
   | "error";
-type RetryAction = "approval" | "authorization" | "increase";
+
+// Which write action the user most recently initiated. Cleared once its
+// receipt confirms, so the UI can decide whose pending/error status to watch.
+type ActiveStep = "approval" | "authorization" | "increase" | undefined;
 
 const flashLeverageAddress = isAddress(MORPHO_FLASH_LEVERAGE_ADDRESS)
   ? MORPHO_FLASH_LEVERAGE_ADDRESS
@@ -42,9 +45,7 @@ export function useLeverageStateMachine(
   const { address, chainId } = useConnection();
   const resetTrade = useTradeStore((trade) => trade.reset);
   const switchChain = useSwitchChain();
-  const [transactionState, setState] =
-    useState<LeverageOperationState>("connect");
-  const [retryAction, setRetryAction] = useState<RetryAction>();
+  const [activeStep, setActiveStep] = useState<ActiveStep>();
   const market = LENDING_MARKETS[0];
   const marketParams = market;
   const quote = useIncreasePosition(initialCollateral, leverage);
@@ -93,125 +94,147 @@ export function useLeverageStateMachine(
     isAuthorized: morpho.isAuthorized,
     requiredAmount,
   });
-  const transactionFailed =
-    (transactionState === "approving" &&
-      (erc20.writeContract.isError || approvalReceipt.isError)) ||
-    (transactionState === "authorizing" &&
-      (morpho.authorizationWrite.isError || authorizationReceipt.isError)) ||
-    (transactionState === "increasing" &&
-      (flashLeverage.writeContract.isError || increaseReceipt.isError));
-  const state = transactionFailed
-    ? "error"
-    : transactionState === "approving" ||
-        transactionState === "authorizing" ||
-        transactionState === "increasing" ||
-        transactionState === "error"
-      ? transactionState
-      : readinessState;
+
+  // Each step's "pending" is derived straight from the wagmi mutation +
+  // receipt it owns. Because every retry calls `.reset()` immediately before
+  // re-submitting, a failed attempt can never leave stale pending/error state
+  // behind for the next attempt to trip over.
+  const approvalPending =
+    erc20.writeContract.isPending ||
+    (erc20.writeContract.isSuccess && approvalReceipt.isPending);
+  const authorizationPending =
+    morpho.authorizationWrite.isPending ||
+    (morpho.authorizationWrite.isSuccess && authorizationReceipt.isPending);
+  const increasePending =
+    flashLeverage.writeContract.isPending ||
+    (flashLeverage.writeContract.isSuccess && increaseReceipt.isPending);
+
+  const isTransactionPending =
+    approvalPending || authorizationPending || increasePending;
+
+  // If the active step isn't currently pending (never started, succeeded, or
+  // failed) we always fall back to the live readiness check. That means a
+  // failed transaction reverts the UI to the correct next action for free -
+  // there's no separate "failed"/"retry" state to get stuck in.
+  const state: LeverageOperationState = approvalPending
+    ? "approving"
+    : authorizationPending
+      ? "authorizing"
+      : increasePending
+        ? "increasing"
+        : readinessState;
 
   useEffect(() => {
-    if (state === "approving" && approvalReceipt.isSuccess) {
+    if (activeStep === "approval" && approvalReceipt.isSuccess) {
+      setActiveStep(undefined);
       void erc20.allowanceQuery.refetch();
-      setState("checking");
     }
-  }, [approvalReceipt.isSuccess, erc20.allowanceQuery, state]);
+  }, [activeStep, approvalReceipt.isSuccess, erc20.allowanceQuery]);
 
   useEffect(() => {
-    if (state === "authorizing" && authorizationReceipt.isSuccess) {
+    if (
+      activeStep !== "approval" ||
+      (!erc20.writeContract.isError && !approvalReceipt.isError)
+    ) {
+      return;
+    }
+    erc20.writeContract.reset();
+    setActiveStep(undefined);
+  }, [activeStep, erc20.writeContract]);
+
+  useEffect(() => {
+    if (activeStep === "authorization" && authorizationReceipt.isSuccess) {
+      setActiveStep(undefined);
       void morpho.authorizationQuery.refetch();
-      setState("checking");
     }
-  }, [authorizationReceipt.isSuccess, morpho.authorizationQuery, state]);
+  }, [activeStep, authorizationReceipt.isSuccess, morpho.authorizationQuery]);
 
   useEffect(() => {
-    if (state === "increasing" && increaseReceipt.isSuccess) {
+    if (activeStep !== "authorization" || !morpho.authorizationWrite.isError) {
+      return;
+    }
+    morpho.authorizationWrite.reset();
+    setActiveStep(undefined);
+  }, [activeStep, morpho.authorizationWrite]);
+
+  useEffect(() => {
+    if (activeStep === "increase" && increaseReceipt.isSuccess) {
+      setActiveStep(undefined);
       void Promise.all([
         morpho.positionQuery.refetch(),
         flashLeverage.debtQuery.refetch(),
       ]).then(() => {
-        setRetryAction(undefined);
         resetTrade();
-        setState("checking");
       });
     }
   }, [
+    activeStep,
     flashLeverage.debtQuery,
     increaseReceipt.isSuccess,
     morpho.positionQuery,
     resetTrade,
-    state,
   ]);
+
+  useEffect(() => {
+    if (activeStep !== "increase" || !flashLeverage.writeContract.isError) {
+      return;
+    }
+    flashLeverage.writeContract.reset();
+    setActiveStep(undefined);
+  }, [activeStep, flashLeverage.writeContract]);
 
   const insufficientBalance =
     erc20.balanceQuery.data !== undefined &&
     requiredAmount !== undefined &&
     erc20.balanceQuery.data < requiredAmount;
 
-  const startIncrease = () => {
-    if (
-      address &&
-      requiredAmount !== undefined &&
-      totalCollateral !== undefined &&
-      quote.borrowQuery.data !== undefined &&
-      expectedBorrowOutput
-    ) {
-      setRetryAction("increase");
-      setState("increasing");
-      flashLeverage.increasePosition(
-        createIncreasePosition({
-          user: address,
-          initialCol: requiredAmount,
-          totalCol: totalCollateral,
-          borrowAmount: quote.estimatedBorrowAmount ?? quote.borrowQuery.data,
-          expectedOut: expectedBorrowOutput,
-        }),
-      );
-    }
+  const startApproval = () => {
+    if (!flashLeverageAddress || requiredAmount === undefined) return;
+    erc20.writeContract.reset();
+    setActiveStep("approval");
+    erc20.approve(flashLeverageAddress, requiredAmount);
   };
 
-  const executeOnMainnet = (operationState: LeverageOperationState) => {
-    if (operationState === "error") {
-      erc20.writeContract.reset();
-      morpho.authorizationWrite.reset();
-      flashLeverage.writeContract.reset();
+  const startAuthorization = () => {
+    if (!flashLeverageAddress) return;
+    morpho.authorizationWrite.reset();
+    setActiveStep("authorization");
+    morpho.setAuthorization(flashLeverageAddress, true);
+  };
+
+  const startIncrease = () => {
+    if (
+      !address ||
+      requiredAmount === undefined ||
+      totalCollateral === undefined ||
+      quote.borrowQuery.data === undefined ||
+      !expectedBorrowOutput
+    ) {
+      return;
+    }
+    flashLeverage.writeContract.reset();
+    setActiveStep("increase");
+    flashLeverage.increasePosition(
+      createIncreasePosition({
+        user: address,
+        initialCol: requiredAmount,
+        totalCol: totalCollateral,
+        borrowAmount: quote.estimatedBorrowAmount ?? quote.borrowQuery.data,
+        expectedOut: expectedBorrowOutput,
+      }),
+    );
+  };
+
+  const runStep = (targetState: LeverageOperationState) => {
+    if (targetState === "error") {
       void erc20.allowanceQuery.refetch();
       void morpho.authorizationQuery.refetch();
       void quote.borrowQuery.refetch();
-
-      if (
-        retryAction === "approval" &&
-        flashLeverageAddress &&
-        requiredAmount !== undefined
-      ) {
-        erc20.approve(flashLeverageAddress, requiredAmount);
-        setState("approving");
-      } else if (retryAction === "authorization" && flashLeverageAddress) {
-        morpho.setAuthorization(flashLeverageAddress, true);
-        setState("authorizing");
-      } else if (retryAction === "increase") {
-        startIncrease();
-      } else {
-        setState("checking");
-      }
-      return;
-    }
-
-    if (
-      operationState === "approval-required" &&
-      flashLeverageAddress &&
-      requiredAmount !== undefined
-    ) {
-      erc20.approve(flashLeverageAddress, requiredAmount);
-      setRetryAction("approval");
-      setState("approving");
-    } else if (
-      operationState === "authorization-required" &&
-      flashLeverageAddress
-    ) {
-      morpho.setAuthorization(flashLeverageAddress, true);
-      setRetryAction("authorization");
-      setState("authorizing");
-    } else if (operationState === "ready") {
+    } else if (targetState === "approval-required") {
+      startApproval();
+    } else if (targetState === "authorization-required") {
+      startAuthorization();
+    } else if (targetState === "ready") {
       startIncrease();
     }
   };
@@ -220,20 +243,17 @@ export function useLeverageStateMachine(
     if (chainId !== mainnet.id) {
       switchChain.mutate(
         { chainId: mainnet.id },
-        { onSuccess: () => executeOnMainnet(state) },
+        { onSuccess: () => runStep(readinessState) },
       );
     } else {
-      executeOnMainnet(state);
+      runStep(readinessState);
     }
   };
 
   return {
     state,
     execute,
-    isTransactionPending:
-      state === "approving" ||
-      state === "authorizing" ||
-      state === "increasing",
+    isTransactionPending,
     actionLabel: getActionLabel(
       state,
       insufficientBalance,
@@ -242,10 +262,9 @@ export function useLeverageStateMachine(
     actionDisabled:
       state === "connect" ||
       state === "configuration-error" ||
+      state === "error" ||
       state === "checking" ||
-      state === "approving" ||
-      state === "authorizing" ||
-      state === "increasing" ||
+      isTransactionPending ||
       switchChain.isPending ||
       insufficientBalance ||
       !initialCollateral,
@@ -341,7 +360,7 @@ function getActionLabel(
     case "configuration-error":
       return "Configure leverage contract";
     case "error":
-      return "Retry";
+      return "Unavailable";
     default:
       return "---";
   }

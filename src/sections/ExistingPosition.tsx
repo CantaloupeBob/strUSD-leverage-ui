@@ -11,6 +11,7 @@ import {
   YIELD_TOKEN,
 } from "../utils/constants";
 import { LoadingStrip } from "../components/LoadingStrip";
+import { PositionActionButton } from "../components/PositionActionButton";
 import { TokenIcon } from "../components/TokenIcon";
 import { mainnet } from "wagmi/chains";
 import type { ReactNode } from "react";
@@ -253,18 +254,14 @@ export function ExistingPosition() {
                 }
               />
               <Stat label="After close" value="0 collateral / 0 debt" />
-              <button
-                className="mt-4 w-full border border-[#f08b8b] px-4 py-3 text-xs uppercase tracking-[.08em] text-[#f08b8b] transition-colors hover:bg-[#f08b8b] hover:text-black disabled:cursor-not-allowed disabled:border-[#414545] disabled:text-[#b8bfbd] disabled:hover:bg-transparent disabled:hover:text-[#b8bfbd]"
+              <PositionActionButton
+                className="mt-4"
                 disabled={closePosition.actionDisabled}
+                isPending={closePosition.isTransactionPending}
+                label={closePosition.actionLabel}
                 onClick={closePosition.execute}
-                type="button"
-              >
-                {closePosition.isTransactionPending ? (
-                  <LoadingStrip className="mx-auto h-3 w-28" />
-                ) : (
-                  closePosition.actionLabel
-                )}
-              </button>
+                variant="danger"
+              />
             </div>
           </details>
         </div>

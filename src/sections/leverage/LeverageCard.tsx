@@ -1,4 +1,3 @@
-import { PositionSummary } from "./PositionSummary";
 import { useStrUSDApy } from "../../hooks/useStrUSDApy";
 import { useTradeStore } from "../../store/tradeStore";
 import {
@@ -10,34 +9,26 @@ import {
 import { TokenIcon } from "../../components/TokenIcon";
 import { LoadingStrip } from "../../components/LoadingStrip";
 import { useLeverageStateMachine } from "../../hooks/morphoFlashLeverage/useLeverageStateMachine";
-import { useConnect } from "wagmi";
-import { injected } from "wagmi/connectors";
-import { WalletInstallDropdown } from "../../components/WalletInstallDropdown";
-import { SlippageSettings } from "../../components/SlippageSettings";
 
-export function LeverageCard() {
+type LeverageCardProps = {
+  leverageOperation: ReturnType<typeof useLeverageStateMachine>;
+};
+
+export function LeverageCard({ leverageOperation }: LeverageCardProps) {
   const collateral = useTradeStore((state) => state.collateral);
   const leverage = useTradeStore((state) => state.leverage);
   const setCollateral = useTradeStore((state) => state.setCollateral);
   const setLeverage = useTradeStore((state) => state.setLeverage);
   const { data: apyData, isLoading: isApyLoading } = useStrUSDApy();
-  const leverageOperation = useLeverageStateMachine(collateral, leverage);
   const displayedLeverage = Math.min(leverage, MAX_LEVERAGE);
-  const connect = useConnect();
   const walletBalance = leverageOperation.walletAmount ?? "";
   const balanceQuery = leverageOperation.balanceQuery;
-  const hasCollateral = Number(collateral) > 0;
-  const [showWalletOptions, setShowWalletOptions] = useState(false);
   const handleMax = () => {
     if (walletBalance) setCollateral(walletBalance);
   };
 
   return (
-    <section
-      className="grid min-h-105 grid-cols-1 border border-[#414545] bg-[#050606] sm:grid-cols-2"
-      aria-label="Create leveraged position"
-    >
-      <div className="flex flex-col p-5 sm:p-9">
+    <div className="flex flex-col p-5 sm:p-9">
         <div className="mb-2.5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 font-sans text-[26px] font-medium tracking-[-.04em] sm:text-[30px]">
             <TokenIcon size="medium" token={COLLATERAL_TOKEN} />
@@ -134,53 +125,6 @@ export function LeverageCard() {
             <span>{MAX_LEVERAGE.toFixed(1)}x</span>
           </div>
         </div>
-      </div>
-      <div className="border-t border-[#414545] bg-[#0b0d0d] p-5 sm:border-l sm:border-t-0 sm:p-9">
-        <div className="flex items-center justify-between text-[11px] uppercase tracking-[.12em] text-[#b8bfbd]">
-          <span>Position summary</span>
-          <SlippageSettings />
-        </div>
-        <PositionSummary />
-        {hasCollateral && (
-          <button
-            className="mt-8 w-full border border-[#c7f66e] px-4 py-3 text-xs uppercase tracking-[.08em] text-[#c7f66e] transition-colors hover:bg-[#c7f66e] hover:text-black disabled:cursor-not-allowed disabled:border-[#414545] disabled:text-[#b8bfbd] disabled:hover:bg-transparent disabled:hover:text-[#b8bfbd] sm:mt-10"
-            disabled={
-              leverageOperation.actionDisabled &&
-              leverageOperation.state !== "connect"
-            }
-            aria-label={leverageOperation.actionLabel}
-            onClick={() => {
-              if (leverageOperation.state === "connect") {
-                if (!(window as Window & { ethereum?: unknown }).ethereum) {
-                  setShowWalletOptions(true);
-                } else {
-                  connect.mutate(
-                    { connector: injected() },
-                    { onError: () => setShowWalletOptions(true) },
-                  );
-                }
-              } else {
-                leverageOperation.execute();
-              }
-            }}
-            type="button"
-          >
-            {leverageOperation.isTransactionPending ? (
-              <LoadingStrip className="mx-auto h-3 w-28" />
-            ) : (
-              leverageOperation.actionLabel
-            )}
-          </button>
-        )}
-        {showWalletOptions && (
-          <div className="relative">
-            <WalletInstallDropdown
-              onClose={() => setShowWalletOptions(false)}
-            />
-          </div>
-        )}
-      </div>
-    </section>
+    </div>
   );
 }
-import { useState } from "react";

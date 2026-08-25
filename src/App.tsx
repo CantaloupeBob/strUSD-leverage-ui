@@ -1,7 +1,7 @@
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Header } from "./components/Header";
-import { LeverageCard } from "./sections/leverage/LeverageCard";
+import { LeverageSection } from "./sections/leverage/LeverageSection";
 import { ExistingPosition } from "./sections/ExistingPosition";
 import { config } from "./web3-config";
 
@@ -19,7 +19,7 @@ function App() {
             <p className="mb-7 text-[13px] text-[#b8bfbd] sm:mb-9">
               Gain boosted exposure to strUSD
             </p>
-            <LeverageCard />
+            <LeverageSection />
             <ExistingPosition />
           </main>
         </div>
