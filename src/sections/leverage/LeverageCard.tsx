@@ -12,6 +12,7 @@ import { LoadingStrip } from "../../components/LoadingStrip";
 import { useLeverageStateMachine } from "../../hooks/morphoFlashLeverage/useLeverageStateMachine";
 import { useConnect } from "wagmi";
 import { injected } from "wagmi/connectors";
+import { WalletInstallDropdown } from "../../components/WalletInstallDropdown";
 
 export function LeverageCard() {
   const collateral = useTradeStore((state) => state.collateral);
@@ -25,6 +26,7 @@ export function LeverageCard() {
   const walletBalance = leverageOperation.walletAmount ?? "";
   const balanceQuery = leverageOperation.balanceQuery;
   const hasCollateral = Number(collateral) > 0;
+  const [showWalletOptions, setShowWalletOptions] = useState(false);
   const handleMax = () => {
     if (walletBalance) setCollateral(walletBalance);
   };
@@ -147,7 +149,14 @@ export function LeverageCard() {
             aria-label={leverageOperation.actionLabel}
             onClick={() => {
               if (leverageOperation.state === "connect") {
-                connect.mutate({ connector: injected() });
+                if (!(window as Window & { ethereum?: unknown }).ethereum) {
+                  setShowWalletOptions(true);
+                } else {
+                  connect.mutate(
+                    { connector: injected() },
+                    { onError: () => setShowWalletOptions(true) },
+                  );
+                }
               } else {
                 leverageOperation.execute();
               }
@@ -161,7 +170,15 @@ export function LeverageCard() {
             )}
           </button>
         )}
+        {showWalletOptions && (
+          <div className="relative">
+            <WalletInstallDropdown
+              onClose={() => setShowWalletOptions(false)}
+            />
+          </div>
+        )}
       </div>
     </section>
   );
 }
+import { useState } from "react";
