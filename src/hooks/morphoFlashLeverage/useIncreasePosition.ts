@@ -4,6 +4,7 @@ import { parseTokenAmount } from "../../utils/amounts";
 import { useCurveEstimatedSwapAmount } from "./useCurveEstimatedSwapAmount";
 import { useStrUSD } from "../useStrUSD";
 import { calculatePositionValues } from "./positionCalculations";
+import { useTradeStore } from "../../store/tradeStore";
 
 function calculateTotalCollateral(
   collateralAmount: bigint | undefined,
@@ -31,6 +32,7 @@ function calculateExpectedBorrowOutput(
 }
 
 export function useIncreasePosition(collateral: string, leverage: number) {
+  const slippageBps = useTradeStore((state) => state.slippageBps);
   const requiredAmount = parseTokenAmount(
     collateral,
     COLLATERAL_TOKEN.decimals,
@@ -43,6 +45,7 @@ export function useIncreasePosition(collateral: string, leverage: number) {
   const borrowQuery = useCurveEstimatedSwapAmount(
     expectedBorrowOutput,
     "increase",
+    BigInt(slippageBps),
   );
   const { exchangeRate, exchangeRateQuery } = useStrUSD(requiredAmount);
 

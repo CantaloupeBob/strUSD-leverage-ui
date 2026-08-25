@@ -17,7 +17,7 @@ function App() {
           </div>
           <main className="mx-auto w-full max-w-230 py-7.5 sm:py-13">
             <p className="mb-7 text-[13px] text-[#b8bfbd] sm:mb-9">
-              Gain exposure to strUSD to gain boosted yield.
+              Gain boosted exposure to strUSD
             </p>
             <LeverageCard />
             <ExistingPosition />

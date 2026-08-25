@@ -100,15 +100,14 @@ export function useLeverageStateMachine(
       (morpho.authorizationWrite.isError || authorizationReceipt.isError)) ||
     (transactionState === "increasing" &&
       (flashLeverage.writeContract.isError || increaseReceipt.isError));
-  const state =
-    transactionFailed
-      ? "error"
-      : transactionState === "approving" ||
+  const state = transactionFailed
+    ? "error"
+    : transactionState === "approving" ||
         transactionState === "authorizing" ||
         transactionState === "increasing" ||
         transactionState === "error"
-        ? transactionState
-        : readinessState;
+      ? transactionState
+      : readinessState;
 
   useEffect(() => {
     if (state === "approving" && approvalReceipt.isSuccess) {
@@ -292,10 +291,7 @@ function getReadinessState({
   if (!address) return "connect";
   if (!hasContract) return "configuration-error";
   if (borrowQuoteError) return "error";
-  if (
-    requiredAmount === undefined ||
-    expectedBorrowOutput === undefined
-  ) {
+  if (requiredAmount === undefined || expectedBorrowOutput === undefined) {
     return "checking";
   }
   if (allowance !== undefined && allowance < requiredAmount) {

@@ -3,6 +3,7 @@ import { useSwitchChain, useWaitForTransactionReceipt } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { useDecreasePosition } from "./useDecreasePosition";
 import { createDecreasePosition } from "./positionParams";
+import { DEBT_REPAYMENT_CUSHION } from "../../utils/constants";
 
 type CloseState =
   | "connect"
@@ -39,17 +40,16 @@ export function useClosePositionStateMachine() {
       ? "checking"
       : position.morpho.authorizationQuery.data === undefined
         ? "checking"
-      : position.morpho.authorizationQuery.data === false
-        ? "authorization-required"
-        : "ready";
-  const state =
-    transactionFailed
-      ? "error"
-      : transactionState === "authorizing" || transactionState === "closing"
-        ? transactionState
-        : transactionState === "error"
-          ? "error"
-          : readinessState;
+        : position.morpho.authorizationQuery.data === false
+          ? "authorization-required"
+          : "ready";
+  const state = transactionFailed
+    ? "error"
+    : transactionState === "authorizing" || transactionState === "closing"
+      ? transactionState
+      : transactionState === "error"
+        ? "error"
+        : readinessState;
 
   useEffect(() => {
     if (state === "authorizing" && authorizationReceipt.isSuccess) {
@@ -68,8 +68,11 @@ export function useClosePositionStateMachine() {
         position.morpho.positionQuery.refetch(),
         position.flashLeverage.debtQuery.refetch(),
       ]).then(() => {
+        position.flashLeverage.writeContract.reset();
         setRetryAction(undefined);
         setTransactionState("checking");
+      }).catch(() => {
+        setTransactionState("error");
       });
     }
   }, [
@@ -105,9 +108,7 @@ export function useClosePositionStateMachine() {
       return;
     }
 
-    if (
-      operationState === "authorization-required"
-    ) {
+    if (operationState === "authorization-required") {
       position.morpho.setAuthorization(position.flashLeverageAddress, true);
       setRetryAction("authorization");
       setTransactionState("authorizing");
@@ -125,13 +126,36 @@ export function useClosePositionStateMachine() {
     }
   };
 
-  function startClose() {
+  async function startClose() {
+    if (!position.address) {
+      return;
+    }
+
+    const [{ data: positionData }, { data: debt }] = await Promise.all([
+      position.morpho.positionQuery.refetch(),
+      position.flashLeverage.debtQuery.refetch(),
+    ]);
+    const collateral =
+      Array.isArray(positionData) && typeof positionData[2] === "bigint"
+        ? positionData[2]
+        : undefined;
+    const freshDebt = typeof debt === "bigint" ? debt : undefined;
+    const freshRepayAmount =
+      freshDebt === undefined
+        ? undefined
+        : freshDebt + DEBT_REPAYMENT_CUSHION;
+    const estimatedSwapAmount = position.swapQuery.estimatedSwapAmount;
+
     if (
-      !position.address ||
-      !position.collateral ||
-      !position.debt ||
-      !position.swapQuery.estimatedSwapAmount
+      collateral === undefined ||
+      freshDebt === undefined ||
+      freshRepayAmount === undefined ||
+      estimatedSwapAmount === undefined ||
+      collateral === 0n ||
+      freshDebt === 0n ||
+      estimatedSwapAmount > collateral
     ) {
+      setTransactionState("checking");
       return;
     }
 
@@ -140,10 +164,10 @@ export function useClosePositionStateMachine() {
     position.flashLeverage.decreasePosition(
       createDecreasePosition({
         user: position.address,
-        colToWithdraw: position.collateral,
-        colToSwap: position.swapQuery.estimatedSwapAmount,
-        repayAmount: position.debt,
-        expectedOut: position.debt,
+        colToWithdraw: collateral,
+        colToSwap: estimatedSwapAmount,
+        repayAmount: freshRepayAmount,
+        expectedOut: freshRepayAmount,
       }),
     );
   }
@@ -163,8 +187,7 @@ export function useClosePositionStateMachine() {
     ...position,
     state,
     execute,
-    isTransactionPending:
-      state === "authorizing" || state === "closing",
+    isTransactionPending: state === "authorizing" || state === "closing",
     actionLabel: getActionLabel(state, switchChain.isPending),
     actionDisabled:
       state === "checking" ||
@@ -198,6 +221,6 @@ function getActionLabel(state: CloseState, isSwitching: boolean) {
     case "connect":
       return "Connect wallet";
     default:
-      return "Checking...";
+      return "---";
   }
 }

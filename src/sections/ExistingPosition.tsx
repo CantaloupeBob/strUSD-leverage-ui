@@ -8,6 +8,7 @@ import {
   DEBT_TOKEN,
   LENDING_MARKETS,
   MORPHO_FLASH_LEVERAGE_ADDRESS,
+  YIELD_TOKEN,
 } from "../utils/constants";
 import { LoadingStrip } from "../components/LoadingStrip";
 import { TokenIcon } from "../components/TokenIcon";
@@ -157,37 +158,115 @@ export function ExistingPosition() {
                 : `${morpho.annualInterestRate.toFixed(2)}%`
             }
           />
-          <div className="mt-5 border-t border-[#252828] pt-4">
-            <div className="mb-3 text-[11px] uppercase tracking-[.08em] text-[#b8bfbd]">
-              Close position
-            </div>
-            <Stat
-              label="Estimated USDC returned"
-              value={
-                closePosition.estimatedReturn === undefined ? (
-                  "--"
+          <details className="group mt-5 border-t border-[#252828] pt-4">
+            <summary className="flex cursor-pointer list-none items-center justify-between text-[11px] uppercase tracking-[.08em] text-[#b8bfbd]">
+              <span className="flex items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className="inline-block transition-transform group-open:rotate-90"
+                >
+                  &gt;
+                </span>
+                Close position
+              </span>
+            </summary>
+            <div className="mt-3">
+              <Stat
+                label="Collateral being closed"
+                value={
+                  closePosition.collateral === undefined ? (
+                    "--"
+                  ) : (
+                    <TokenValue
+                      token={COLLATERAL_TOKEN}
+                      value={Number(formatUnits(closePosition.collateral, 18))}
+                    />
+                  )
+                }
+              />
+              <Stat
+                label="USDC debt repaid"
+                value={
+                  debt === undefined ? (
+                    "--"
+                  ) : (
+                    <TokenValue token={DEBT_TOKEN} value={debt} />
+                  )
+                }
+              />
+              <Stat
+                label="Curve input (before slippage)"
+                value={
+                  closePosition.quotedSwapAmount === undefined ? (
+                    "--"
+                  ) : (
+                    <TokenValue
+                      token={COLLATERAL_TOKEN}
+                      value={Number(
+                        formatUnits(closePosition.quotedSwapAmount, 18),
+                      )}
+                    />
+                  )
+                }
+              />
+              <Stat
+                label={`Collateral swapped (${closePosition.slippageBps} bps slippage)`}
+                value={
+                  closePosition.collateralToSwap === undefined ? (
+                    "--"
+                  ) : (
+                    <TokenValue
+                      token={COLLATERAL_TOKEN}
+                      value={Number(
+                        formatUnits(closePosition.collateralToSwap, 18),
+                      )}
+                    />
+                  )
+                }
+              />
+              <Stat
+                label="Estimated strUSD returned"
+                value={
+                  closePosition.collateralReturned === undefined ? (
+                    "--"
+                  ) : (
+                    <TokenValue
+                      token={COLLATERAL_TOKEN}
+                      value={Number(
+                        formatUnits(closePosition.collateralReturned, 18),
+                      )}
+                    />
+                  )
+                }
+              />
+              <Stat
+                label="Estimated returned value (NAV)"
+                value={
+                  closePosition.collateralReturnedValue === undefined ? (
+                    "--"
+                  ) : (
+                    <TokenValue
+                      token={YIELD_TOKEN}
+                      value={closePosition.collateralReturnedValue}
+                    />
+                  )
+                }
+              />
+              <Stat label="After close" value="0 collateral / 0 debt" />
+              <button
+                className="mt-4 w-full border border-[#f08b8b] px-4 py-3 text-xs uppercase tracking-[.08em] text-[#f08b8b] transition-colors hover:bg-[#f08b8b] hover:text-black disabled:cursor-not-allowed disabled:border-[#414545] disabled:text-[#b8bfbd] disabled:hover:bg-transparent disabled:hover:text-[#b8bfbd]"
+                disabled={closePosition.actionDisabled}
+                onClick={closePosition.execute}
+                type="button"
+              >
+                {closePosition.isTransactionPending ? (
+                  <LoadingStrip className="mx-auto h-3 w-28" />
                 ) : (
-                  <TokenValue
-                    token={DEBT_TOKEN}
-                    value={closePosition.estimatedReturn}
-                  />
-                )
-              }
-            />
-            <Stat label="After close" value="0 collateral / 0 debt" />
-            <button
-              className="mt-4 w-full border border-[#f08b8b] px-4 py-3 text-xs uppercase tracking-[.08em] text-[#f08b8b] transition-colors hover:bg-[#f08b8b] hover:text-black disabled:cursor-not-allowed disabled:border-[#414545] disabled:text-[#b8bfbd] disabled:hover:bg-transparent disabled:hover:text-[#b8bfbd]"
-              disabled={closePosition.actionDisabled}
-              onClick={closePosition.execute}
-              type="button"
-            >
-              {closePosition.isTransactionPending ? (
-                <LoadingStrip className="mx-auto h-3 w-28" />
-              ) : (
-                closePosition.actionLabel
-              )}
-            </button>
-          </div>
+                  closePosition.actionLabel
+                )}
+              </button>
+            </div>
+          </details>
         </div>
       )}
     </section>

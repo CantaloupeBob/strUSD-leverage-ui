@@ -13,6 +13,7 @@ import { useLeverageStateMachine } from "../../hooks/morphoFlashLeverage/useLeve
 import { useConnect } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { WalletInstallDropdown } from "../../components/WalletInstallDropdown";
+import { SlippageSettings } from "../../components/SlippageSettings";
 
 export function LeverageCard() {
   const collateral = useTradeStore((state) => state.collateral);
@@ -114,7 +115,7 @@ export function LeverageCard() {
           </p>
         )}
         <div className="mt-9 sm:mt-11">
-          <div className="mb-2.5 flex justify-between text-[11px] uppercase tracking-[.08em] text-[#b8bfbd]">
+          <div className="mb-2.5 flex items-center justify-between text-[11px] uppercase tracking-[.08em] text-[#b8bfbd]">
             <span>Leverage</span>
             <span className="range-value">{displayedLeverage.toFixed(1)}x</span>
           </div>
@@ -135,8 +136,9 @@ export function LeverageCard() {
         </div>
       </div>
       <div className="border-t border-[#414545] bg-[#0b0d0d] p-5 sm:border-l sm:border-t-0 sm:p-9">
-        <div className="text-[11px] uppercase tracking-[.12em] text-[#b8bfbd]">
-          Position summary
+        <div className="flex items-center justify-between text-[11px] uppercase tracking-[.12em] text-[#b8bfbd]">
+          <span>Position summary</span>
+          <SlippageSettings />
         </div>
         <PositionSummary />
         {hasCollateral && (
