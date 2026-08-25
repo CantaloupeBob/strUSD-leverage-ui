@@ -43,7 +43,7 @@ export function LeverageSection() {
       <div className="border-t border-[#414545] bg-[#0b0d0d] p-5 sm:border-l sm:border-t-0 sm:p-9">
         <div className="flex items-center justify-between text-[11px] uppercase tracking-[.12em] text-[#b8bfbd]">
           <span>Position summary</span>
-          <SlippageSettings />
+          {hasCollateral && <SlippageSettings />}
         </div>
         <PositionSummary />
         {hasCollateral && (
