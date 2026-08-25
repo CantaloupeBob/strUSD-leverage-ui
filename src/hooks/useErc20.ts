@@ -24,6 +24,7 @@ export function useErc20(
   });
   const allowanceQuery = useReadContract({
     address: tokenAddress,
+    chainId: options.chainId,
     abi: erc20Abi,
     functionName: "allowance",
     args:
@@ -43,6 +44,7 @@ export function useErc20(
 
     return writeContract.mutate({
       address: tokenAddress,
+      chainId: options.chainId,
       abi: erc20Abi,
       functionName: "approve",
       args: [spender, amount],

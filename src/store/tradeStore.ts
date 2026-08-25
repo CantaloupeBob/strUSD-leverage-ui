@@ -6,6 +6,7 @@ export type TradeStore = {
   leverage: number;
   setCollateral: (collateral: string) => void;
   setLeverage: (leverage: number) => void;
+  reset: () => void;
 };
 
 export const useTradeStore = create<TradeStore>((set) => ({
@@ -14,4 +15,5 @@ export const useTradeStore = create<TradeStore>((set) => ({
   setCollateral: (collateral) => set({ collateral }),
   setLeverage: (leverage) =>
     set({ leverage: Math.min(Math.max(leverage, 1.1), MAX_LEVERAGE) }),
+  reset: () => set({ collateral: "", leverage: 1.1 }),
 }));

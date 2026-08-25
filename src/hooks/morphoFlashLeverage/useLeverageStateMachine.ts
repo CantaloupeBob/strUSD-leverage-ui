@@ -8,6 +8,7 @@ import { mainnet } from "wagmi/chains";
 import { formatUnits, isAddress } from "viem";
 import { useErc20 } from "../useErc20";
 import { useMorpho } from "../useMorpho";
+import { useTradeStore } from "../../store/tradeStore";
 import { useMorphoFlashLeverage } from "./useMorphoFlashLeverage";
 import {
   COLLATERAL_TOKEN,
@@ -27,7 +28,6 @@ export type LeverageOperationState =
   | "authorizing"
   | "ready"
   | "increasing"
-  | "complete"
   | "error";
 type RetryAction = "approval" | "authorization" | "increase";
 
@@ -40,8 +40,10 @@ export function useLeverageStateMachine(
   leverage: number,
 ) {
   const { address, chainId } = useConnection();
+  const resetTrade = useTradeStore((trade) => trade.reset);
   const switchChain = useSwitchChain();
-  const [state, setState] = useState<LeverageOperationState>("connect");
+  const [transactionState, setState] =
+    useState<LeverageOperationState>("connect");
   const [retryAction, setRetryAction] = useState<RetryAction>();
   const market = LENDING_MARKETS[0];
   const marketParams = market;
@@ -76,50 +78,37 @@ export function useLeverageStateMachine(
     hash: flashLeverage.writeContract.data,
   });
 
-  useEffect(() => {
-    if (!address) {
-      setState("connect");
-    } else if (!flashLeverageAddress) {
-      setState("configuration-error");
-    } else if (quote.borrowQuery.isError) {
-      setState("error");
-    } else if (
-      !flashLeverageAddress ||
-      !requiredAmount ||
-      !expectedBorrowOutput ||
-      quote.borrowQuery.isError
-    ) {
-      setState("checking");
-    } else if (
-      erc20.allowanceQuery.data !== undefined &&
-      erc20.allowanceQuery.data < requiredAmount
-    ) {
-      setState("approval-required");
-    } else if (
-      morpho.authorizationQuery.data !== undefined &&
-      !morpho.isAuthorized
-    ) {
-      setState("authorization-required");
-    } else if (
-      erc20.allowanceQuery.data !== undefined &&
-      morpho.authorizationQuery.data !== undefined &&
-      quote.borrowQuery.data !== undefined
-    ) {
-      setState("ready");
-    }
-  }, [
+  const readinessState = getReadinessState({
     address,
-    chainId,
-    erc20.allowanceQuery.data,
-    initialCollateral,
+    allowance: erc20.allowanceQuery.data,
+    authorization:
+      morpho.authorizationQuery.data === true ||
+      morpho.authorizationQuery.data === false
+        ? morpho.authorizationQuery.data
+        : undefined,
+    borrowQuote: quote.borrowQuery.data,
+    borrowQuoteError: quote.borrowQuery.isError,
     expectedBorrowOutput,
-    quote.borrowQuery.data,
-    quote.borrowQuery.isError,
-    morpho.authorizationQuery.data,
-    morpho.isAuthorized,
+    hasContract: flashLeverageAddress !== undefined,
+    isAuthorized: morpho.isAuthorized,
     requiredAmount,
-    state,
-  ]);
+  });
+  const transactionFailed =
+    (transactionState === "approving" &&
+      (erc20.writeContract.isError || approvalReceipt.isError)) ||
+    (transactionState === "authorizing" &&
+      (morpho.authorizationWrite.isError || authorizationReceipt.isError)) ||
+    (transactionState === "increasing" &&
+      (flashLeverage.writeContract.isError || increaseReceipt.isError));
+  const state =
+    transactionFailed
+      ? "error"
+      : transactionState === "approving" ||
+        transactionState === "authorizing" ||
+        transactionState === "increasing" ||
+        transactionState === "error"
+        ? transactionState
+        : readinessState;
 
   useEffect(() => {
     if (state === "approving" && approvalReceipt.isSuccess) {
@@ -141,33 +130,16 @@ export function useLeverageStateMachine(
         morpho.positionQuery.refetch(),
         flashLeverage.debtQuery.refetch(),
       ]).then(() => {
-        setState("complete");
+        setRetryAction(undefined);
+        resetTrade();
+        setState("checking");
       });
     }
   }, [
     flashLeverage.debtQuery,
     increaseReceipt.isSuccess,
     morpho.positionQuery,
-    state,
-  ]);
-
-  useEffect(() => {
-    const transactionFailed =
-      (state === "approving" &&
-        (erc20.writeContract.isError || approvalReceipt.isError)) ||
-      (state === "authorizing" &&
-        (morpho.authorizationWrite.isError || authorizationReceipt.isError)) ||
-      (state === "increasing" &&
-        (flashLeverage.writeContract.isError || increaseReceipt.isError));
-
-    if (transactionFailed) setState("error");
-  }, [
-    approvalReceipt.isError,
-    authorizationReceipt.isError,
-    erc20.writeContract.isError,
-    flashLeverage.writeContract.isError,
-    increaseReceipt.isError,
-    morpho.authorizationWrite.isError,
+    resetTrade,
     state,
   ]);
 
@@ -275,7 +247,6 @@ export function useLeverageStateMachine(
       state === "approving" ||
       state === "authorizing" ||
       state === "increasing" ||
-      state === "complete" ||
       switchChain.isPending ||
       insufficientBalance ||
       !initialCollateral,
@@ -295,6 +266,52 @@ export function useLeverageStateMachine(
       increaseReceipt.error ??
       switchChain.error,
   };
+}
+
+function getReadinessState({
+  address,
+  allowance,
+  authorization,
+  borrowQuote,
+  borrowQuoteError,
+  expectedBorrowOutput,
+  hasContract,
+  isAuthorized,
+  requiredAmount,
+}: {
+  address?: `0x${string}`;
+  allowance?: bigint;
+  authorization?: boolean;
+  borrowQuote?: bigint;
+  borrowQuoteError: boolean;
+  expectedBorrowOutput?: bigint;
+  hasContract: boolean;
+  isAuthorized: boolean;
+  requiredAmount?: bigint;
+}): LeverageOperationState {
+  if (!address) return "connect";
+  if (!hasContract) return "configuration-error";
+  if (borrowQuoteError) return "error";
+  if (
+    requiredAmount === undefined ||
+    expectedBorrowOutput === undefined
+  ) {
+    return "checking";
+  }
+  if (allowance !== undefined && allowance < requiredAmount) {
+    return "approval-required";
+  }
+  if (authorization !== undefined && !isAuthorized) {
+    return "authorization-required";
+  }
+  if (
+    allowance !== undefined &&
+    authorization !== undefined &&
+    borrowQuote !== undefined
+  ) {
+    return "ready";
+  }
+  return "checking";
 }
 
 function getActionLabel(
@@ -323,8 +340,6 @@ function getActionLabel(
       return "Opening position";
     case "ready":
       return "Increase position";
-    case "complete":
-      return "Position submitted";
     case "connect":
       return "Connect wallet";
     case "configuration-error":

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useReadContract } from "wagmi";
+import { mainnet } from "wagmi/chains";
 import { CURVE_ROUTER_ABI } from "../../utils/abis/curve-router-abi";
 import { CURVE_ROUTER_ADDRESS } from "../../utils/constants";
 import {
@@ -16,6 +17,7 @@ export function useCurveEstimatedSwapAmount(
 ) {
   const query = useReadContract({
     address: CURVE_ROUTER_ADDRESS,
+    chainId: mainnet.id,
     abi: CURVE_ROUTER_ABI,
     functionName: "get_dx",
     args:
