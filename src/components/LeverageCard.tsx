@@ -4,6 +4,7 @@ import { useTradeStore } from "../store/tradeStore";
 import {
   COLLATERAL_TOKEN,
   DEBT_TOKEN,
+  MAX_LEVERAGE,
   MAX_INITIAL_COLLATERAL_LENGTH,
 } from "../utils/constants";
 import { TokenIcon } from "./TokenIcon";
@@ -15,12 +16,11 @@ import { injected } from "wagmi/connectors";
 export function LeverageCard() {
   const collateral = useTradeStore((state) => state.collateral);
   const leverage = useTradeStore((state) => state.leverage);
-  const maxLeverage = useTradeStore((state) => state.maxLeverage);
-  const displayedLeverage = Math.min(leverage, maxLeverage);
   const setCollateral = useTradeStore((state) => state.setCollateral);
   const setLeverage = useTradeStore((state) => state.setLeverage);
   const { data: apyData, isLoading: isApyLoading } = useStrUSDApy();
   const leverageOperation = useLeverageStateMachine(collateral);
+  const displayedLeverage = Math.min(leverage, MAX_LEVERAGE);
   const connect = useConnect();
   const walletBalance = leverageOperation.walletAmount ?? "";
   const balanceQuery = leverageOperation.balanceQuery;
@@ -118,7 +118,7 @@ export function LeverageCard() {
           <input
             aria-label="Leverage"
             className="my-3 h-0.5 w-full accent-[#c7f66e]"
-            max={maxLeverage}
+            max={MAX_LEVERAGE}
             min="1.1"
             onChange={(event) => setLeverage(Number(event.target.value))}
             step="0.1"
@@ -127,7 +127,7 @@ export function LeverageCard() {
           />
           <div className="flex justify-between text-[10px] text-[#b8bfbd]">
             <span>1.1x</span>
-            <span>{maxLeverage.toFixed(1)}x</span>
+            <span>{MAX_LEVERAGE.toFixed(1)}x</span>
           </div>
         </div>
       </div>

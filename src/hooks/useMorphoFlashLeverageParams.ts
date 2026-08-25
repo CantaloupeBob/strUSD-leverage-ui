@@ -11,6 +11,9 @@ import type {
   IncreasePosition,
 } from "./useMorphoFlashLeverage";
 
+// Param construction can be found -
+// CurveRouter docs: https://docs.curve.finance/developer/amm/router/curve-router-ng
+
 type PositionIdentity = {
   user: Address;
 };

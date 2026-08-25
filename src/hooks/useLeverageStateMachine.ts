@@ -157,12 +157,6 @@ export function useLeverageStateMachine(initialCollateral: string) {
       : undefined,
     balanceQuery: erc20.balanceQuery,
     insufficientBalance,
-    isLoading:
-      erc20.allowanceQuery.isLoading ||
-      morpho.authorizationQuery.isLoading ||
-      approvalReceipt.isLoading ||
-      authorizationReceipt.isLoading ||
-      increaseReceipt.isLoading,
   };
 }
 
