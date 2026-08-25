@@ -132,6 +132,14 @@ export function getDecreaseSwapArguments(
 }
 
 function encodeSwapData([route, params, expectedOut]: CurveSwapArguments) {
+  const encodedPools = [
+    zeroAddress,
+    zeroAddress,
+    zeroAddress,
+    zeroAddress,
+    zeroAddress,
+  ] as const;
+
   return encodeAbiParameters(
     [
       { type: "uint256" },
@@ -139,7 +147,7 @@ function encodeSwapData([route, params, expectedOut]: CurveSwapArguments) {
       { type: "uint256[5][5]" },
       { type: "address[5]" },
     ],
-    [expectedOut, route, params, curvePools()],
+    [expectedOut, route, params, encodedPools],
   );
 }
 

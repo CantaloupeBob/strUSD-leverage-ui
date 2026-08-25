@@ -19,7 +19,7 @@ export function LeverageCard() {
   const setCollateral = useTradeStore((state) => state.setCollateral);
   const setLeverage = useTradeStore((state) => state.setLeverage);
   const { data: apyData, isLoading: isApyLoading } = useStrUSDApy();
-  const leverageOperation = useLeverageStateMachine(collateral);
+  const leverageOperation = useLeverageStateMachine(collateral, leverage);
   const displayedLeverage = Math.min(leverage, MAX_LEVERAGE);
   const connect = useConnect();
   const walletBalance = leverageOperation.walletAmount ?? "";
