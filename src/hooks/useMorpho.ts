@@ -21,6 +21,7 @@ type UseMorphoParameters = {
   marketId?: Hex;
   userAddress?: Address;
   authorizedAddress?: Address;
+  chainId?: number;
 };
 
 function isPosition(data: unknown): data is readonly [bigint, bigint, bigint] {
@@ -35,10 +36,12 @@ export function useMorpho({
   marketId,
   userAddress,
   authorizedAddress,
+  chainId,
 }: UseMorphoParameters = {}) {
   const authorizationWrite = useWriteContract();
   const positionQuery = useReadContract({
     address: MORPHO_ADDRESS,
+    chainId,
     abi: MORPHO_ABI,
     functionName: "position",
     args: marketId && userAddress ? [marketId, userAddress] : undefined,

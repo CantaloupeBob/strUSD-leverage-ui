@@ -1,15 +1,20 @@
 import { useEffect, useState } from "react";
-import { useConnection, useWaitForTransactionReceipt } from "wagmi";
+import {
+  useConnection,
+  useSwitchChain,
+  useWaitForTransactionReceipt,
+} from "wagmi";
+import { mainnet } from "wagmi/chains";
 import { formatUnits, isAddress } from "viem";
-import { useErc20 } from "./useErc20";
-import { useMorpho } from "./useMorpho";
+import { useErc20 } from "../useErc20";
+import { useMorpho } from "../useMorpho";
 import { useMorphoFlashLeverage } from "./useMorphoFlashLeverage";
 import {
   COLLATERAL_TOKEN,
   LENDING_MARKETS,
   MORPHO_FLASH_LEVERAGE_ADDRESS,
-} from "../utils/constants";
-import { useLeverageQuote } from "./useLeverageQuote";
+} from "../../utils/constants";
+import { useIncreasePosition } from "./useIncreasePosition";
 import { useMorphoFlashLeverageParams } from "./useMorphoFlashLeverageParams";
 
 export type LeverageOperationState =
@@ -24,14 +29,20 @@ export type LeverageOperationState =
   | "increasing"
   | "complete"
   | "error";
+type RetryAction = "approval" | "authorization" | "increase";
 
 const flashLeverageAddress = isAddress(MORPHO_FLASH_LEVERAGE_ADDRESS)
   ? MORPHO_FLASH_LEVERAGE_ADDRESS
   : undefined;
 
-export function useLeverageStateMachine(initialCollateral: string, leverage: number) {
-  const { address } = useConnection();
+export function useLeverageStateMachine(
+  initialCollateral: string,
+  leverage: number,
+) {
+  const { address, chainId } = useConnection();
+  const switchChain = useSwitchChain();
   const [state, setState] = useState<LeverageOperationState>("connect");
+  const [retryAction, setRetryAction] = useState<RetryAction>();
   const market = LENDING_MARKETS[0];
   const marketParams = {
     loanToken: market.loanToken,
@@ -40,21 +51,24 @@ export function useLeverageStateMachine(initialCollateral: string, leverage: num
     irm: market.irm,
     lltv: market.lltv,
   };
-  const quote = useLeverageQuote(initialCollateral, leverage);
+  const quote = useIncreasePosition(initialCollateral, leverage);
   const { requiredAmount, totalCollateral, expectedBorrowOutput } = quote;
   const erc20 = useErc20(
     address,
     COLLATERAL_TOKEN.address,
     flashLeverageAddress,
+    { chainId: mainnet.id },
   );
   const morpho = useMorpho({
     userAddress: address,
     authorizedAddress: flashLeverageAddress,
+    chainId: mainnet.id,
   });
   const flashLeverage = useMorphoFlashLeverage({
     contractAddress: flashLeverageAddress,
     marketParams,
     userAddress: address,
+    chainId: mainnet.id,
   });
   const params = useMorphoFlashLeverageParams();
   const approvalReceipt = useWaitForTransactionReceipt({
@@ -100,6 +114,7 @@ export function useLeverageStateMachine(initialCollateral: string, leverage: num
     }
   }, [
     address,
+    chainId,
     erc20.allowanceQuery.data,
     flashLeverageAddress,
     initialCollateral,
@@ -109,6 +124,7 @@ export function useLeverageStateMachine(initialCollateral: string, leverage: num
     morpho.authorizationQuery.data,
     morpho.isAuthorized,
     requiredAmount,
+    state,
   ]);
 
   useEffect(() => {
@@ -156,19 +172,8 @@ export function useLeverageStateMachine(initialCollateral: string, leverage: num
     requiredAmount !== undefined &&
     erc20.balanceQuery.data < requiredAmount;
 
-  const execute = () => {
+  const startIncrease = () => {
     if (
-      state === "approval-required" &&
-      flashLeverageAddress &&
-      requiredAmount !== undefined
-    ) {
-      erc20.approve(flashLeverageAddress, requiredAmount);
-      setState("approving");
-    } else if (state === "authorization-required" && flashLeverageAddress) {
-      morpho.setAuthorization(flashLeverageAddress, true);
-      setState("authorizing");
-    } else if (
-      state === "ready" &&
       address &&
       requiredAmount !== undefined &&
       totalCollateral !== undefined &&
@@ -184,14 +189,81 @@ export function useLeverageStateMachine(initialCollateral: string, leverage: num
           expectedOut: expectedBorrowOutput,
         }),
       );
+      setRetryAction("increase");
       setState("increasing");
+    }
+  };
+
+  const executeOnMainnet = (operationState: LeverageOperationState) => {
+    if (operationState === "error") {
+      erc20.writeContract.reset();
+      morpho.authorizationWrite.reset();
+      flashLeverage.writeContract.reset();
+      void erc20.allowanceQuery.refetch();
+      void morpho.authorizationQuery.refetch();
+      void quote.borrowQuery.refetch();
+
+      if (
+        retryAction === "approval" &&
+        flashLeverageAddress &&
+        requiredAmount !== undefined
+      ) {
+        erc20.approve(flashLeverageAddress, requiredAmount);
+        setState("approving");
+      } else if (retryAction === "authorization" && flashLeverageAddress) {
+        morpho.setAuthorization(flashLeverageAddress, true);
+        setState("authorizing");
+      } else if (retryAction === "increase") {
+        startIncrease();
+      } else {
+        setState("checking");
+      }
+      return;
+    }
+
+    if (
+      operationState === "approval-required" &&
+      flashLeverageAddress &&
+      requiredAmount !== undefined
+    ) {
+      erc20.approve(flashLeverageAddress, requiredAmount);
+      setRetryAction("approval");
+      setState("approving");
+    } else if (
+      operationState === "authorization-required" &&
+      flashLeverageAddress
+    ) {
+      morpho.setAuthorization(flashLeverageAddress, true);
+      setRetryAction("authorization");
+      setState("authorizing");
+    } else if (operationState === "ready") {
+      startIncrease();
+    }
+  };
+
+  const execute = () => {
+    if (chainId !== mainnet.id) {
+      switchChain.mutate(
+        { chainId: mainnet.id },
+        { onSuccess: () => executeOnMainnet(state) },
+      );
+    } else {
+      executeOnMainnet(state);
     }
   };
 
   return {
     state,
     execute,
-    actionLabel: getActionLabel(state, insufficientBalance),
+    isTransactionPending:
+      state === "approving" ||
+      state === "authorizing" ||
+      state === "increasing",
+    actionLabel: getActionLabel(
+      state,
+      insufficientBalance,
+      switchChain.isPending,
+    ),
     actionDisabled:
       state === "connect" ||
       state === "configuration-error" ||
@@ -200,8 +272,8 @@ export function useLeverageStateMachine(initialCollateral: string, leverage: num
       state === "authorizing" ||
       state === "increasing" ||
       state === "complete" ||
+      switchChain.isPending ||
       insufficientBalance ||
-      state === "error" ||
       !initialCollateral,
     requiredAmount,
     walletAmount: erc20.balanceQuery.data
@@ -216,14 +288,20 @@ export function useLeverageStateMachine(initialCollateral: string, leverage: num
       quote.borrowQuery.error ??
       approvalReceipt.error ??
       authorizationReceipt.error ??
-      increaseReceipt.error,
+      increaseReceipt.error ??
+      switchChain.error,
   };
 }
 
 function getActionLabel(
   state: LeverageOperationState,
   insufficientBalance: boolean,
+  isSwitchingNetwork: boolean,
 ) {
+  if (isSwitchingNetwork) {
+    return "Switching to Ethereum";
+  }
+
   if (insufficientBalance) {
     return "Insufficient balance";
   }
@@ -239,6 +317,8 @@ function getActionLabel(
       return "Waiting for authorization";
     case "increasing":
       return "Opening position";
+    case "ready":
+      return "Increase position";
     case "complete":
       return "Position submitted";
     case "connect":
@@ -246,7 +326,7 @@ function getActionLabel(
     case "configuration-error":
       return "Configure leverage contract";
     case "error":
-      return "Transaction failed";
+      return "Retry";
     default:
       return "---";
   }

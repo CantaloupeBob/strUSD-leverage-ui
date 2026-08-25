@@ -1,4 +1,4 @@
-import { getAddress } from "viem";
+import { formatUnits, getAddress } from "viem";
 import type { Address } from "viem";
 import trUsdLogo from "../assets/tokens/trUSD.svg";
 import strUsdLogo from "../assets/tokens/strUSD.svg";
@@ -54,15 +54,16 @@ export const LENDING_MARKETS = [
 
 export const LEVERAGE_BUFFER = 0.15;
 const calculatedMaxLeverage =
-  (1 / (1 - Number(LENDING_MARKETS[0].lltv) / 1e18)) *
-  (1 - LEVERAGE_BUFFER);
+  (1 / (1 - Number(formatUnits(LENDING_MARKETS[0].lltv, 18)))) * (1 - LEVERAGE_BUFFER);
 export const MAX_LEVERAGE = Math.ceil(calculatedMaxLeverage * 10) / 10;
 export const MAX_INITIAL_COLLATERAL_LENGTH = 11;
 
 export const COLLATERAL_TOKEN = TOKENS[1];
 export const YIELD_TOKEN = TOKENS[0];
 export const DEBT_TOKEN = TOKENS[2];
-export const MORPHO_FLASH_LEVERAGE_ADDRESS = "";
+export const MORPHO_FLASH_LEVERAGE_ADDRESS = getAddress(
+  "0xf0920F97C49fa1dd3734928F62EA8876053C51F8",
+);
 export const STRUSD_TRUSD_POOL = getAddress(
   "0x25a637C80AD90177d0B3fF28aa2D3F74F7165ccb",
 );

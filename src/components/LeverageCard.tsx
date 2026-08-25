@@ -9,7 +9,7 @@ import {
 } from "../utils/constants";
 import { TokenIcon } from "./TokenIcon";
 import { LoadingStrip } from "./LoadingStrip";
-import { useLeverageStateMachine } from "../hooks/useLeverageStateMachine";
+import { useLeverageStateMachine } from "../hooks/morphoFlashLeverage/useLeverageStateMachine";
 import { useConnect } from "wagmi";
 import { injected } from "wagmi/connectors";
 
@@ -24,6 +24,7 @@ export function LeverageCard() {
   const connect = useConnect();
   const walletBalance = leverageOperation.walletAmount ?? "";
   const balanceQuery = leverageOperation.balanceQuery;
+  const hasCollateral = Number(collateral) > 0;
   const handleMax = () => {
     if (walletBalance) setCollateral(walletBalance);
   };
@@ -136,23 +137,30 @@ export function LeverageCard() {
           Position summary
         </div>
         <PositionSummary />
-        <button
-          className="mt-10 w-full border border-[#c7f66e] px-4 py-3 text-xs uppercase tracking-[.08em] text-[#c7f66e] transition-colors hover:bg-[#c7f66e] hover:text-black disabled:cursor-not-allowed disabled:border-[#414545] disabled:text-[#b8bfbd] disabled:hover:bg-transparent disabled:hover:text-[#b8bfbd]"
-          disabled={
-            leverageOperation.actionDisabled &&
-            leverageOperation.state !== "connect"
-          }
-          onClick={() => {
-            if (leverageOperation.state === "connect") {
-              connect.mutate({ connector: injected() });
-            } else {
-              leverageOperation.execute();
+        {hasCollateral && (
+          <button
+            className="mt-10 w-full border border-[#c7f66e] px-4 py-3 text-xs uppercase tracking-[.08em] text-[#c7f66e] transition-colors hover:bg-[#c7f66e] hover:text-black disabled:cursor-not-allowed disabled:border-[#414545] disabled:text-[#b8bfbd] disabled:hover:bg-transparent disabled:hover:text-[#b8bfbd]"
+            disabled={
+              leverageOperation.actionDisabled &&
+              leverageOperation.state !== "connect"
             }
-          }}
-          type="button"
-        >
-          {leverageOperation.actionLabel}
-        </button>
+            aria-label={leverageOperation.actionLabel}
+            onClick={() => {
+              if (leverageOperation.state === "connect") {
+                connect.mutate({ connector: injected() });
+              } else {
+                leverageOperation.execute();
+              }
+            }}
+            type="button"
+          >
+            {leverageOperation.isTransactionPending ? (
+              <LoadingStrip className="mx-auto h-3 w-28" />
+            ) : (
+              leverageOperation.actionLabel
+            )}
+          </button>
+        )}
       </div>
     </section>
   );

@@ -1,7 +1,7 @@
 import { useReadContract, useWriteContract } from "wagmi";
 import type { Address, Hex } from "viem";
-import { MORPHO_FLASH_LEVERAGE_ABI } from "../utils/abis/morpho-flash-leverage-abi";
-import type { MorphoMarketParams } from "./useMorpho";
+import { MORPHO_FLASH_LEVERAGE_ABI } from "../../utils/abis/morpho-flash-leverage-abi";
+import type { MorphoMarketParams } from "../useMorpho";
 
 export type IncreasePosition = {
   user: Address;
@@ -23,12 +23,14 @@ type UseMorphoFlashLeverageParameters = {
   contractAddress?: Address;
   marketParams: MorphoMarketParams;
   userAddress?: Address;
+  chainId?: number;
 };
 
 export function useMorphoFlashLeverage({
   contractAddress,
   marketParams,
   userAddress,
+  chainId,
 }: UseMorphoFlashLeverageParameters) {
   const debtQuery = useReadContract({
     address: contractAddress,
@@ -46,6 +48,7 @@ export function useMorphoFlashLeverage({
   const increasePosition = (position: IncreasePosition) =>
     writeContract.mutate({
       address: requireContractAddress(contractAddress),
+      chainId,
       abi: MORPHO_FLASH_LEVERAGE_ABI,
       functionName: "increasePosition",
       args: [position, marketParams],
@@ -54,6 +57,7 @@ export function useMorphoFlashLeverage({
   const decreasePosition = (position: DecreasePosition) =>
     writeContract.mutate({
       address: requireContractAddress(contractAddress),
+      chainId,
       abi: MORPHO_FLASH_LEVERAGE_ABI,
       functionName: "decreasePosition",
       args: [position, marketParams],

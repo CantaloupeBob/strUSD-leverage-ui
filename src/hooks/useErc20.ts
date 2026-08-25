@@ -2,13 +2,19 @@ import { useReadContract, useWriteContract } from "wagmi";
 import type { Address } from "viem";
 import { erc20Abi } from "viem";
 
+type Erc20Options = {
+  chainId?: number;
+};
+
 export function useErc20(
   targetAddress?: Address,
   tokenAddress?: Address,
   spenderAddress?: Address,
+  options: Erc20Options = {},
 ) {
   const balanceQuery = useReadContract({
     address: tokenAddress,
+    chainId: options.chainId,
     abi: erc20Abi,
     functionName: "balanceOf",
     args: tokenAddress && targetAddress ? [targetAddress] : undefined,

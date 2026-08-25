@@ -1,14 +1,18 @@
 import { useMemo } from "react";
 import { useReadContract } from "wagmi";
-import { CURVE_ROUTER_ABI } from "../utils/abis/curve-router-abi";
-import { CURVE_ROUTER_ADDRESS } from "../utils/constants";
-import { getIncreaseSwapArguments } from "./useMorphoFlashLeverageParams";
+import { CURVE_ROUTER_ABI } from "../../utils/abis/curve-router-abi";
+import { CURVE_ROUTER_ADDRESS } from "../../utils/constants";
+import {
+  getSwapArguments,
+  type PositionDirection,
+} from "./useMorphoFlashLeverageParams";
 
 const BASIS_POINTS = 10_000n;
 
-export function useCurveEstimatedBorrowAmount(
+export function useCurveEstimatedSwapAmount(
   expectedOut?: bigint,
-  bufferBps = 100n,
+  direction: PositionDirection = "increase",
+  bufferBps = 175n,
 ) {
   const query = useReadContract({
     address: CURVE_ROUTER_ADDRESS,
@@ -17,7 +21,7 @@ export function useCurveEstimatedBorrowAmount(
     args:
       expectedOut === undefined
         ? undefined
-        : getIncreaseSwapArguments(expectedOut),
+        : getSwapArguments(direction, expectedOut),
     query: {
       enabled: expectedOut !== undefined && expectedOut > 0n,
     },

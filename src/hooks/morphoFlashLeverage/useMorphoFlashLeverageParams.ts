@@ -5,7 +5,7 @@ import {
   DEBT_TOKEN,
   STRUSD_TRUSD_POOL,
   TRUSD_USDC_POOL,
-} from "../utils/constants";
+} from "../../utils/constants";
 import type {
   DecreasePosition,
   IncreasePosition,
@@ -53,6 +53,7 @@ export type CurveSwapArguments = readonly [
   bigint,
   readonly [Address, Address, Address, Address, Address],
 ];
+export type PositionDirection = "increase" | "decrease";
 
 const swapParams = (
   firstPoolInput: bigint,
@@ -129,6 +130,15 @@ export function getDecreaseSwapArguments(
     expectedOut,
     curvePools(),
   ];
+}
+
+export function getSwapArguments(
+  direction: PositionDirection,
+  expectedOut: bigint,
+) {
+  return direction === "increase"
+    ? getIncreaseSwapArguments(expectedOut)
+    : getDecreaseSwapArguments(expectedOut);
 }
 
 function encodeSwapData([route, params, expectedOut]: CurveSwapArguments) {
