@@ -4,6 +4,7 @@ import { Header } from "./components/Header";
 import { LeverageSection } from "./sections/leverage/LeverageSection";
 import { ExistingPosition } from "./sections/ExistingPosition";
 import { config } from "./web3-config";
+import { Toaster } from "./components/Toaster";
 
 const queryClient = new QueryClient();
 
@@ -11,6 +12,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config}>
+        <Toaster />
         <div className="mx-auto min-h-svh w-full max-w-7xl bg-black px-4 font-mono text-white sm:px-10">
           <div className="flex h-16 items-center justify-end">
             <Header />
