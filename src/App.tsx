@@ -14,7 +14,7 @@ function App() {
       <WagmiProvider config={config}>
         <Toaster />
         <div className="mx-auto min-h-svh w-full max-w-7xl bg-black px-4 font-mono text-white sm:px-10">
-          <div className="flex h-16 items-center justify-end">
+          <div className="mx-auto flex h-16 w-full max-w-230 items-center justify-end">
             <Header />
           </div>
           <main className="mx-auto w-full max-w-230 py-7.5 sm:py-13">

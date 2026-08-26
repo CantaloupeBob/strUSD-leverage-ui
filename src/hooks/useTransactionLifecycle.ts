@@ -50,6 +50,7 @@ export function useTransactionLifecycle<Step extends string>({
   const isPending = write.isPending || (write.isSuccess && receipt.isPending);
   const isCurrentReceipt =
     write.data !== undefined && receipt.data?.transactionHash === write.data;
+  const hasWriteError = write.isError || write.error !== undefined;
 
   useEffect(() => {
     if (activeStep !== step) return;
@@ -68,14 +69,14 @@ export function useTransactionLifecycle<Step extends string>({
       return;
     }
 
-    if (write.isError || (isCurrentReceipt && receipt.isError)) {
+    if (hasWriteError || (isCurrentReceipt && receipt.isError)) {
       if (handledRef.current) return;
       handledRef.current = true;
       showToast({
         status: "fail",
         title: labels.failureTitle,
         description: getErrorDescription(
-          write.isError ? write.error : receipt.error,
+          hasWriteError ? write.error : receipt.error,
         ),
         hash: write.data,
       });
@@ -96,6 +97,7 @@ export function useTransactionLifecycle<Step extends string>({
     activeStep,
     isCurrentReceipt,
     isPending,
+    hasWriteError,
     labels,
     onConfirmed,
     receipt.data?.transactionHash,
