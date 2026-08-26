@@ -79,6 +79,13 @@ export function useLeverageStateMachine(
     setActiveStep,
     step: "approval",
     write: erc20.writeContract,
+    labels: {
+      pendingTitle: "Collateral approval",
+      pendingDescription: "Approve collateral in your wallet.",
+      successTitle: "Collateral approved",
+      successDescription: "Collateral approval confirmed.",
+      failureTitle: "Collateral approval failed",
+    },
     onConfirmed: () => void erc20.allowanceQuery.refetch(),
   });
   const authorizationLifecycle = useTransactionLifecycle({
@@ -87,6 +94,13 @@ export function useLeverageStateMachine(
     setActiveStep,
     step: "authorization",
     write: morpho.authorizationWrite,
+    labels: {
+      pendingTitle: "Morpho authorization",
+      pendingDescription: "Authorize Morpho in your wallet.",
+      successTitle: "Morpho authorized",
+      successDescription: "Morpho authorization confirmed.",
+      failureTitle: "Morpho authorization failed",
+    },
     onConfirmed: () => void morpho.authorizationQuery.refetch(),
   });
   const increaseLifecycle = useTransactionLifecycle({
@@ -95,6 +109,13 @@ export function useLeverageStateMachine(
     setActiveStep,
     step: "increase",
     write: flashLeverage.writeContract,
+    labels: {
+      pendingTitle: "Position opening",
+      pendingDescription: "Opening your leveraged position.",
+      successTitle: "Position opened",
+      successDescription: "Your leveraged position is now open.",
+      failureTitle: "Position opening failed",
+    },
     onConfirmed: () => {
       void Promise.all([
         morpho.positionQuery.refetch(),

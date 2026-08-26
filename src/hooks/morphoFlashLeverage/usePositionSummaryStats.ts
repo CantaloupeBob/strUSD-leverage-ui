@@ -60,6 +60,7 @@ export function usePositionSummaryStats({
       : undefined;
 
   return {
+    initialCollateral: preview.collateralShares,
     currentCollateral: existing.collateralShares,
     currentDebt: existing.debt,
     currentNetEquity: existing.netEquity,

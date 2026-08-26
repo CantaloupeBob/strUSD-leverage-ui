@@ -109,11 +109,7 @@ export function PositionSummary() {
   return (
     <div className="mt-4.5">
       <StatRow label="strUSD collateral">
-        <TransitionTokenValue
-          token={COLLATERAL_TOKEN}
-          current={stats.currentCollateral}
-          next={stats.totalCollateral}
-        />
+        <TokenValue token={COLLATERAL_TOKEN} value={stats.initialCollateral} />
       </StatRow>
       <StatRow label="net equity">
         {isNetEquityLoading ? (

@@ -48,6 +48,13 @@ export function useClosePositionStateMachine() {
     setActiveStep,
     step: "authorization",
     write: position.morpho.authorizationWrite,
+    labels: {
+      pendingTitle: "Morpho authorization",
+      pendingDescription: "Authorize Morpho in your wallet.",
+      successTitle: "Morpho authorized",
+      successDescription: "Morpho authorization confirmed.",
+      failureTitle: "Morpho authorization failed",
+    },
     onConfirmed: () => {
       void position.morpho.authorizationQuery.refetch();
     },
@@ -58,6 +65,13 @@ export function useClosePositionStateMachine() {
     setActiveStep,
     step: "close",
     write: position.flashLeverage.writeContract,
+    labels: {
+      pendingTitle: "Position closing",
+      pendingDescription: "Closing your position.",
+      successTitle: "Position closed",
+      successDescription: "Your position is now closed.",
+      failureTitle: "Position closing failed",
+    },
     onConfirmed: () => {
       void Promise.all([
         position.morpho.positionQuery.refetch(),
