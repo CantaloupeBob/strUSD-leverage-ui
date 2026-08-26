@@ -1,35 +1,17 @@
-# React + TypeScript + Vite
+# strUSD Leverage UI
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+An single page Ethereum application for opening and closing leveraged positions using strUSD collateral, Morpho lending markets, and Curve swaps.
 
-Currently, two official plugins are available:
+The interface is intentionally simple. Users can connect a wallet, enter initial collateral, choose leverage, review projected position metrics, adjust operation specific slippage, and execute or close a position.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Demo
 
-## React Compiler
+<video src="https://github.com/user-attachments/assets/cdca2b00-a677-432b-aa01-f2ef3aebdc2d" controls></video>
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+<br>
 
-Note: This will impact Vite dev & build performances.
-You can also try [the experimental native React Compiler support in plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md#rust-react-compiler) by using `compiler: true` in the plugin options instead of using the Babel plugin.
+It is hosted: https://strusd-leverage-ui.netlify.app/
+<br>
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+This was deployed strictly as an experiment so there is no guarantee it’s secure. Use at your own risk.
+The contract repo used to support the onchain operations can be found: https://github.com/CantaloupeBob/morpho_flash_leverage
