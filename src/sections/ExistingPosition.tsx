@@ -1,4 +1,5 @@
 import { formatUnits } from "viem";
+import { useState } from "react";
 import {
   COLLATERAL_TOKEN,
   DEBT_TOKEN,
@@ -6,6 +7,7 @@ import {
 } from "../utils/constants";
 import { LoadingStrip } from "../components/LoadingStrip";
 import { PositionActionButton } from "../components/PositionActionButton";
+import { SlippageSettings } from "../components/SlippageSettings";
 import { TokenIcon } from "../components/TokenIcon";
 import { mainnet } from "wagmi/chains";
 import type { ReactNode } from "react";
@@ -37,6 +39,7 @@ function TokenValue({
 }
 
 export function ExistingPosition() {
+  const [isCloseOpen, setIsCloseOpen] = useState(false);
   const closePosition = useClosePositionStateMachine();
   const {
     address,
@@ -133,19 +136,31 @@ export function ExistingPosition() {
                 : `${morpho.annualInterestRate.toFixed(2)}%`
             }
           />
-          <details className="group mt-5 border-t border-[#252828] pt-4">
-            <summary className="flex cursor-pointer list-none items-center justify-between text-[11px] uppercase tracking-[.08em] text-[#b8bfbd]">
+          <div className="mt-5 border-t border-[#252828] pt-4">
+            <button
+              aria-expanded={isCloseOpen}
+              className="flex w-full items-center justify-between text-[11px] uppercase tracking-[.08em] text-[#b8bfbd]"
+              onClick={() => setIsCloseOpen((open) => !open)}
+              type="button"
+            >
               <span className="flex items-center gap-2">
                 <span
                   aria-hidden="true"
-                  className="inline-block transition-transform group-open:rotate-90"
+                  className={`inline-block transition-transform ${
+                    isCloseOpen ? "rotate-90" : ""
+                  }`}
                 >
                   &gt;
                 </span>
                 Close position
               </span>
-            </summary>
-            <div className="mt-3">
+            </button>
+            {isCloseOpen && (
+              <>
+                <div className="mt-3 flex justify-end">
+                  <SlippageSettings operation="close" />
+                </div>
+                <div className="mt-3">
               <Stat
                 label="Collateral being closed"
                 value={
@@ -236,8 +251,10 @@ export function ExistingPosition() {
                 onClick={closePosition.execute}
                 variant="danger"
               />
-            </div>
-          </details>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </section>

@@ -1,9 +1,23 @@
 import { useTradeStore } from "../store/tradeStore";
 import { useEffect, useRef, useState } from "react";
 
-export function SlippageSettings() {
-  const slippageBps = useTradeStore((state) => state.slippageBps);
-  const setSlippageBps = useTradeStore((state) => state.setSlippageBps);
+type SlippageOperation = "increase" | "close";
+
+export function SlippageSettings({
+  operation,
+}: {
+  operation: SlippageOperation;
+}) {
+  const slippageBps = useTradeStore((state) =>
+    operation === "increase"
+      ? state.increaseSlippageBps
+      : state.closeSlippageBps,
+  );
+  const setSlippageBps = useTradeStore((state) =>
+    operation === "increase"
+      ? state.setIncreaseSlippageBps
+      : state.setCloseSlippageBps,
+  );
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -64,7 +78,7 @@ export function SlippageSettings() {
         <div className="absolute right-0 z-10 mt-3 w-56 border border-[#414545] bg-[#050606] p-4">
           <label
             className="flex items-center justify-between gap-3 text-[11px] uppercase tracking-[.08em] text-[#b8bfbd]"
-            htmlFor="slippage"
+            htmlFor={`${operation}-slippage`}
           >
             <span>Slippage</span>
             <span>{(slippageBps / 100).toFixed(2)}%</span>
@@ -72,7 +86,7 @@ export function SlippageSettings() {
           <div className="mt-3 flex items-center border-b border-[#414545] pb-2 focus-within:border-[#c7f66e]">
             <input
               className="w-full bg-transparent text-right text-sm text-white outline-0"
-              id="slippage"
+              id={`${operation}-slippage`}
               inputMode="decimal"
               min="0"
               max="50"

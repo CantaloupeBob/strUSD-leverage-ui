@@ -13,7 +13,7 @@ export function useDecreasePosition() {
   const position = useMorphoPosition();
   const { address, chainId, morpho, flashLeverage, collateral, debt } =
     position;
-  const slippageBps = useTradeStore((state) => state.slippageBps);
+  const slippageBps = useTradeStore((state) => state.closeSlippageBps);
   const repayAmount =
     debt === undefined ? undefined : debt + DEBT_REPAYMENT_CUSHION;
   const swapQuery = useCurveEstimatedSwapAmount(

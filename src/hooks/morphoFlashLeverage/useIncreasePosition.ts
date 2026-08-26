@@ -31,7 +31,7 @@ function calculateExpectedBorrowOutput(
 }
 
 export function useIncreasePosition(collateral: string, leverage: number) {
-  const slippageBps = useTradeStore((state) => state.slippageBps);
+  const slippageBps = useTradeStore((state) => state.increaseSlippageBps);
   const requiredAmount = parseTokenAmount(
     collateral,
     COLLATERAL_TOKEN.decimals,

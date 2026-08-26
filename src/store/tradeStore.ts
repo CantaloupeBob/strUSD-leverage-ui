@@ -4,21 +4,36 @@ import { MAX_LEVERAGE } from "../utils/constants";
 export type TradeStore = {
   collateral: string;
   leverage: number;
-  slippageBps: number;
+  increaseSlippageBps: number;
+  closeSlippageBps: number;
   setCollateral: (collateral: string) => void;
   setLeverage: (leverage: number) => void;
-  setSlippageBps: (slippageBps: number) => void;
+  setIncreaseSlippageBps: (slippageBps: number) => void;
+  setCloseSlippageBps: (slippageBps: number) => void;
   reset: () => void;
 };
 
 export const useTradeStore = create<TradeStore>((set) => ({
   collateral: "",
   leverage: 1.1,
-  slippageBps: 50,
+  increaseSlippageBps: 175,
+  closeSlippageBps: 100,
   setCollateral: (collateral) => set({ collateral }),
   setLeverage: (leverage) =>
     set({ leverage: Math.min(Math.max(leverage, 1.1), MAX_LEVERAGE) }),
-  setSlippageBps: (slippageBps) =>
-    set({ slippageBps: Math.min(Math.max(Math.round(slippageBps), 0), 5000) }),
+  setIncreaseSlippageBps: (increaseSlippageBps) =>
+    set({
+      increaseSlippageBps: Math.min(
+        Math.max(Math.round(increaseSlippageBps), 0),
+        5000,
+      ),
+    }),
+  setCloseSlippageBps: (closeSlippageBps) =>
+    set({
+      closeSlippageBps: Math.min(
+        Math.max(Math.round(closeSlippageBps), 0),
+        5000,
+      ),
+    }),
   reset: () => set({ collateral: "", leverage: 1.1 }),
 }));
