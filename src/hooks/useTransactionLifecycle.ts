@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useToastStore } from "../store/toastStore";
 
 type TransactionWrite = {
@@ -47,13 +47,13 @@ export function useTransactionLifecycle<Step extends string>({
 }) {
   const showToast = useToastStore((state) => state.showToast);
   const handledRef = useRef(false);
+  const [attemptStarted, setAttemptStarted] = useState(false);
   const isPending = write.isPending || (write.isSuccess && receipt.isPending);
   const isCurrentReceipt =
     write.data !== undefined && receipt.data?.transactionHash === write.data;
-  const hasWriteError = write.isError || write.error !== undefined;
 
   useEffect(() => {
-    if (activeStep !== step) return;
+    if (activeStep !== step || !attemptStarted) return;
 
     if (isCurrentReceipt && receipt.isSuccess) {
       if (handledRef.current) return;
@@ -69,14 +69,14 @@ export function useTransactionLifecycle<Step extends string>({
       return;
     }
 
-    if (hasWriteError || (isCurrentReceipt && receipt.isError)) {
+    if (isCurrentReceipt && receipt.isError) {
       if (handledRef.current) return;
       handledRef.current = true;
       showToast({
         status: "fail",
         title: labels.failureTitle,
         description: getErrorDescription(
-          hasWriteError ? write.error : receipt.error,
+          receipt.error,
         ),
         hash: write.data,
       });
@@ -95,9 +95,9 @@ export function useTransactionLifecycle<Step extends string>({
     }
   }, [
     activeStep,
+    attemptStarted,
     isCurrentReceipt,
     isPending,
-    hasWriteError,
     labels,
     onConfirmed,
     receipt.data?.transactionHash,
@@ -115,11 +115,27 @@ export function useTransactionLifecycle<Step extends string>({
     write.isSuccess,
   ]);
 
-  const start = (action: () => void) => {
+  const start = (action: () => Promise<unknown> | void) => {
     handledRef.current = false;
+    setAttemptStarted(false);
     write.reset();
     setActiveStep(step);
-    action();
+    window.setTimeout(() => {
+      setAttemptStarted(true);
+      void Promise.resolve()
+        .then(action)
+        .catch((error: unknown) => {
+          if (handledRef.current) return;
+          handledRef.current = true;
+          showToast({
+            status: "fail",
+            title: labels.failureTitle,
+            description: getErrorDescription(error),
+          });
+          write.reset();
+          setActiveStep(undefined);
+        });
+    }, 0);
   };
 
   return { isPending, start };

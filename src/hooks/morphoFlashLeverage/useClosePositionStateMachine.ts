@@ -92,7 +92,10 @@ export function useClosePositionStateMachine() {
 
   const startAuthorization = () => {
     authorizationLifecycle.start(() => {
-      position.morpho.setAuthorization(position.flashLeverageAddress, true);
+      return position.morpho.setAuthorization(
+        position.flashLeverageAddress,
+        true,
+      );
     });
   };
 

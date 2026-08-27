@@ -45,7 +45,7 @@ export function useMorphoFlashLeverage({
   const writeContract = useWriteContract();
 
   const increasePosition = (position: IncreasePosition) =>
-    writeContract.mutate({
+    writeContract.mutateAsync({
       address: requireContractAddress(contractAddress),
       chainId,
       abi: MORPHO_FLASH_LEVERAGE_ABI,
@@ -54,7 +54,7 @@ export function useMorphoFlashLeverage({
     });
 
   const decreasePosition = (position: DecreasePosition) =>
-    writeContract.mutate({
+    writeContract.mutateAsync({
       address: requireContractAddress(contractAddress),
       chainId,
       abi: MORPHO_FLASH_LEVERAGE_ABI,

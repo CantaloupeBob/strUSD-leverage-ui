@@ -42,7 +42,7 @@ export function useErc20(
       throw new Error("A token address is required to approve spending");
     }
 
-    return writeContract.mutate({
+    return writeContract.mutateAsync({
       address: tokenAddress,
       chainId: options.chainId,
       abi: erc20Abi,

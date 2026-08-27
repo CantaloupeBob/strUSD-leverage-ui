@@ -109,7 +109,7 @@ export function useMorpho({
     : undefined;
 
   const setAuthorization = (authorized: Address, isAuthorized: boolean) =>
-    authorizationWrite.mutate({
+    authorizationWrite.mutateAsync({
       address: MORPHO_ADDRESS,
       chainId,
       abi: MORPHO_ABI,

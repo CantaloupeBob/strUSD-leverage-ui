@@ -147,14 +147,14 @@ export function useLeverageStateMachine(
   const startApproval = () => {
     if (!flashLeverageAddress || requiredAmount === undefined) return;
     approvalLifecycle.start(() => {
-      erc20.approve(flashLeverageAddress, requiredAmount);
+      return erc20.approve(flashLeverageAddress, requiredAmount);
     });
   };
 
   const startAuthorization = () => {
     if (!flashLeverageAddress) return;
     authorizationLifecycle.start(() => {
-      morpho.setAuthorization(flashLeverageAddress, true);
+      return morpho.setAuthorization(flashLeverageAddress, true);
     });
   };
 
@@ -170,7 +170,7 @@ export function useLeverageStateMachine(
     }
     const borrowAmount = quote.estimatedBorrowAmount ?? quote.borrowQuery.data;
     increaseLifecycle.start(() => {
-      flashLeverage.increasePosition(
+      return flashLeverage.increasePosition(
         createIncreasePosition({
           user: address,
           initialCol: requiredAmount,
