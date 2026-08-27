@@ -1,6 +1,6 @@
 # strUSD Leverage UI
 
-An single page Ethereum application for opening and closing leveraged positions using strUSD collateral, Morpho lending markets, and Curve swaps.
+A single page Ethereum application for opening and closing leveraged positions using strUSD collateral, Morpho lending markets, and Curve swaps.
 
 The interface is intentionally simple. Users can connect a wallet, enter initial collateral, choose leverage, review projected position metrics, adjust operation specific slippage, and execute or close a position.
 
