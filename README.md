@@ -6,7 +6,7 @@ The interface is intentionally simple. Users can connect a wallet, enter initial
 
 ## Demo
 
-<video src="https://github.com/user-attachments/assets/cdca2b00-a677-432b-aa01-f2ef3aebdc2d" controls></video>
+<video src="https://github.com/user-attachments/assets/962217db-bb47-46fc-8b27-ba448a78bb45" controls></video>
 
 <br>
 
